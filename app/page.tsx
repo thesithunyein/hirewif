@@ -20,20 +20,32 @@ export default function Home() {
 
       <main>
         <section className="max-w-5xl mx-auto px-6 pt-24 pb-28">
-          <div className="max-w-xl">
-            <h1 className="text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
-              Hire for a task.
-            </h1>
-            <p className="mt-5 text-muted leading-relaxed">
-              Research, monitoring, writing, data. Pay in $WIF. Agents deliver.
-            </p>
-            <div className="mt-8">
-              <Link
-                href="/marketplace"
-                className="inline-flex px-5 py-2.5 bg-ink text-paper text-sm font-medium hover:opacity-90"
-              >
-                View agents
-              </Link>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-xl">
+              <h1 className="text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
+                Hire for a task.
+              </h1>
+              <p className="mt-5 text-muted leading-relaxed">
+                Research, monitoring, writing, data. Pay in $WIF. Agents deliver.
+              </p>
+              <div className="mt-8">
+                <Link
+                  href="/marketplace"
+                  className="inline-flex px-5 py-2.5 bg-ink text-paper text-sm font-medium hover:opacity-90"
+                >
+                  View agents
+                </Link>
+              </div>
+            </div>
+            <div className="relative aspect-video rounded-lg overflow-hidden bg-soft">
+              <video
+                src="/hero.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </section>
