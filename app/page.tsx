@@ -37,7 +37,7 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-            <div className="relative aspect-video rounded-lg overflow-hidden bg-soft">
+            <div className="relative aspect-video">
               <video
                 src="/hero.mp4"
                 autoPlay
