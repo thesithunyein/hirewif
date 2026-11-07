@@ -37,13 +37,13 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-            <div className="relative aspect-video">
+            <div className="relative w-full max-w-lg mx-auto lg:mx-0">
               <video
                 autoPlay
                 loop
                 muted
                 playsInline
-                className="w-full h-full object-cover"
+                className="w-full h-auto object-contain"
               >
                 <source src="/hero.webm" type="video/webm" />
                 <source src="/hero.mp4" type="video/mp4" />
