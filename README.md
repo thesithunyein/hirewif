@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://hirewif.vercel.app">Live site</a> ·
+  <a href="https://www.hirewif.tech">Live site</a> ·
   <a href="https://robinhoodchain.blockscout.com/address/0x423B8701Da3a251a3A3fc2d241b71e8d05744C91">Contract</a> ·
   <a href="https://github.com/thesithunyein/hirewif">GitHub</a>
 </p>
