@@ -5,6 +5,7 @@ import { ConnectButton } from '@/components/ConnectButton';
 import { AgentCard } from '@/components/AgentCard';
 import { Logo } from '@/components/Logo';
 import { History } from '@/components/History';
+import { Activity } from '@/components/Activity';
 import { agents } from '@/lib/agents';
 
 export default function Marketplace() {
@@ -31,16 +32,7 @@ export default function Marketplace() {
           </p>
         </div>
 
-        <div className="mb-10 flex gap-6 text-sm">
-          <div className="border border-line px-4 py-3">
-            <div className="text-xs text-muted">Flywheel</div>
-            <div className="font-medium">10% burned per hire</div>
-          </div>
-          <div className="border border-line px-4 py-3">
-            <div className="text-xs text-muted">Network</div>
-            <div className="font-medium">Robinhood Chain</div>
-          </div>
-        </div>
+        <Activity />
 
         <div className="grid sm:grid-cols-2 gap-6">
           {agents.map((agent) => (

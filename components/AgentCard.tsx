@@ -131,6 +131,14 @@ export function AgentCard({ agent }: { agent: Agent }) {
       </div>
       <p className="text-sm text-muted leading-relaxed">{agent.description}</p>
 
+      <div className="flex flex-wrap gap-1.5">
+        {agent.tags.map((tag) => (
+          <span key={tag} className="text-xs px-2 py-0.5 bg-soft text-muted rounded">
+            {tag}
+          </span>
+        ))}
+      </div>
+
       <textarea
         value={task}
         onChange={(e) => setTask(e.target.value)}
