@@ -1,3 +1,4 @@
-export const OPERATOR = '0x000000000000000000000000000000000000dEaD' as const; // replace with real operator wallet
+export const OPERATOR = '0x7A35f63F81357DaDE2cff8f5699b935786Aa9Da2' as const;
+export const HIRE_CONTRACT = '0x423B8701Da3a251a3A3fc2d241b71e8d05744C91' as const;
 export const BURN = '0x000000000000000000000000000000000000dEaD' as const;
 export const BURN_BPS = 1000; // 10%
