@@ -5,6 +5,7 @@ import { ConnectButton } from '@/components/ConnectButton';
 import { AgentCard } from '@/components/AgentCard';
 import { Logo } from '@/components/Logo';
 import { History } from '@/components/History';
+import { agents } from '@/lib/agents';
 
 export default function Marketplace() {
   return (
