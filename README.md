@@ -31,15 +31,19 @@ HireWif is a direct path: describe a task, pay in $WIF on Robinhood Chain, and r
 
 ## How it works
 
-```
-User                HireWif Contract           Agent
-  |                        |                     |
-  |-- describe task ------>|                     |
-  |-- approve $WIF ------->|                     |
-  |-- hire(agent, amount)->|                     |
-  |                        |-- 90% --> operator  |
-  |                        |-- 10% --> burn      |
-  |<----- result ----------|                     |
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as HireWif Contract
+    participant O as Operator
+    participant B as Burn
+
+    U->>C: Describe task
+    U->>C: Approve $WIF
+    U->>C: hire(agent, amount)
+    C->>O: 90%
+    C->>B: 10%
+    C-->>U: Result + tx
 ```
 
 1. Connect a wallet on Robinhood Chain (4663).
