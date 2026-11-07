@@ -2,6 +2,7 @@
 
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { WIF_ADDRESS, WIF_ABI, robinhood } from '@/lib/chain';
+import { OPERATOR, BURN_BPS } from '@/lib/config';
 import { parseUnits } from 'viem';
 import { Icon } from './Icon';
 import { useState, useEffect } from 'react';
@@ -16,21 +17,16 @@ interface Agent {
   tags: string[];
 }
 
-const results: Record<string, (task: string) => string> = {
-  research: (task) => `Brief on "${task}":\n\nKey points:\n• Core concept defined\n• 3 primary sources identified\n• Open questions listed\n\nFull structured brief delivered.`,
-  monitor: (task) => `Monitoring set for "${task}".\n\nAlerts will trigger on:\n• Price movement >5%\n• Large transfers\n• Contract events\n\nActive.`,
-  content: (task) => `Draft for "${task}":\n\nClean, direct copy ready for use. Tone matched to purpose. Ready to publish or refine.`,
-  data: (task) => `Data pull for "${task}" complete.\n\nExtracted, cleaned, and structured. Key fields organized. Export ready.`,
-};
-
 export function AgentCard({ agent }: { agent: Agent }) {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
   const [task, setTask] = useState('');
   const [result, setResult] = useState('');
+  const [loadingResult, setLoadingResult] = useState(false);
 
-  const burn = Math.round(agent.price * 0.1);
+  const burn = Math.round(agent.price * BURN_BPS / 10000);
+  const toOperator = agent.price - burn;
 
   const handleHire = () => {
     if (!isConnected || !task.trim()) return;
@@ -38,16 +34,36 @@ export function AgentCard({ agent }: { agent: Agent }) {
       address: WIF_ADDRESS,
       abi: WIF_ABI,
       functionName: 'transfer',
-      args: [agent.address as `0x${string}`, parseUnits(agent.price.toString(), 18)],
+      args: [OPERATOR, parseUnits(agent.price.toString(), 18)],
       chainId: robinhood.id,
     });
   };
 
   useEffect(() => {
-    if (isSuccess && task && !result) {
-      setResult(results[agent.id]?.(task) || 'Task completed.');
-    }
-  }, [isSuccess, task, result, agent.id]);
+    if (!isSuccess || !task || result || loadingResult) return;
+    setLoadingResult(true);
+    fetch('/api/result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent: agent.id, task }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setResult(data.result || 'Completed.');
+        const entry = {
+          agent: agent.name,
+          task,
+          result: data.result,
+          hash,
+          burn,
+          time: Date.now(),
+          user: address,
+        };
+        const prev = JSON.parse(localStorage.getItem('hirewif-history') || '[]');
+        localStorage.setItem('hirewif-history', JSON.stringify([entry, ...prev].slice(0, 20)));
+      })
+      .finally(() => setLoadingResult(false));
+  }, [isSuccess, task, result, loadingResult, agent.id, agent.name, hash, burn, address]);
 
   return (
     <div className="border border-line bg-white p-6 flex flex-col gap-5 hover:border-muted transition-colors">
@@ -72,8 +88,8 @@ export function AgentCard({ agent }: { agent: Agent }) {
       />
 
       <div className="flex items-center justify-between text-xs text-muted">
-        <span>{agent.price} WIF</span>
-        <span>{burn} WIF burned</span>
+        <span>{agent.price} WIF total</span>
+        <span>{toOperator} to operator · {burn} burned</span>
       </div>
 
       <button
@@ -99,6 +115,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
               </a>
             )}
           </div>
+          {loadingResult && <div className="text-muted">Generating result…</div>}
           {result && (
             <pre className="text-xs whitespace-pre-wrap text-ink bg-soft p-3 rounded">
               {result}

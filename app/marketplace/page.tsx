@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ConnectButton } from '@/components/ConnectButton';
 import { AgentCard } from '@/components/AgentCard';
 import { Logo } from '@/components/Logo';
-import { agents } from '@/lib/agents';
+import { History } from '@/components/History';
 
 export default function Marketplace() {
   return (
@@ -46,6 +46,8 @@ export default function Marketplace() {
             <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
+
+        <History />
       </main>
 
       <footer className="border-t border-line">
