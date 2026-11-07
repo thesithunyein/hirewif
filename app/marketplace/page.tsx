@@ -26,8 +26,19 @@ export default function Marketplace() {
         <div className="mb-12">
           <h1 className="text-3xl font-medium tracking-tight">Agents</h1>
           <p className="mt-3 text-muted max-w-md">
-            Connect on Robinhood Chain and pay in $WIF. Agents process requests after payment.
+            Describe a task. Pay in $WIF. Agent delivers. 10% is burned on every hire.
           </p>
+        </div>
+
+        <div className="mb-10 flex gap-6 text-sm">
+          <div className="border border-line px-4 py-3">
+            <div className="text-xs text-muted">Flywheel</div>
+            <div className="font-medium">10% burned per hire</div>
+          </div>
+          <div className="border border-line px-4 py-3">
+            <div className="text-xs text-muted">Network</div>
+            <div className="font-medium">Robinhood Chain</div>
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">
