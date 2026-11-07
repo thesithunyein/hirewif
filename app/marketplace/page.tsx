@@ -22,18 +22,27 @@ export default function Marketplace() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-14">
-        <div className="mb-10">
-          <h1 className="text-2xl font-medium tracking-tight">Agents</h1>
-          <p className="mt-2 text-sm text-muted">Connect on Robinhood Chain and pay in $WIF.</p>
+      <main className="max-w-5xl mx-auto px-6 py-16">
+        <div className="mb-12">
+          <h1 className="text-3xl font-medium tracking-tight">Agents</h1>
+          <p className="mt-3 text-muted max-w-md">
+            Connect on Robinhood Chain and pay in $WIF. Agents process requests after payment.
+          </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-5">
+        <div className="grid sm:grid-cols-2 gap-6">
           {agents.map((agent) => (
             <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
       </main>
+
+      <footer className="border-t border-line">
+        <div className="max-w-5xl mx-auto px-6 py-8 flex justify-between text-xs text-muted">
+          <div>HireWif</div>
+          <Link href="/" className="hover:text-ink">Home</Link>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -32,7 +32,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="border border-line bg-white p-6 flex flex-col gap-5">
+    <div className="border border-line bg-white p-6 flex flex-col gap-5 hover:border-muted transition-colors">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider">{agent.role}</div>
@@ -43,12 +43,12 @@ export function AgentCard({ agent }: { agent: Agent }) {
         </div>
       </div>
       <p className="text-sm text-muted leading-relaxed flex-1">{agent.description}</p>
-      <div className="flex items-center justify-between pt-1">
+      <div className="flex items-center justify-between pt-2 border-t border-line">
         <div className="text-sm font-medium">{agent.price} WIF</div>
         <button
           onClick={handleHire}
           disabled={!isConnected || isPending || isConfirming || isSuccess}
-          className="px-4 py-2 text-sm bg-ink text-paper disabled:opacity-40"
+          className="px-4 py-2 text-sm bg-ink text-paper disabled:opacity-40 hover:opacity-90"
         >
           {isPending || isConfirming ? 'Sending' : isSuccess ? 'Hired' : 'Hire'}
         </button>
