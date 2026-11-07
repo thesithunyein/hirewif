@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" alt="HireWif" width="120" />
+  <img src="public/logo.png" alt="HireWif" width="180" />
 </p>
 
 <h1 align="center">HireWif</h1>
