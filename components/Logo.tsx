@@ -1,14 +1,15 @@
 import Image from 'next/image';
 
-export function Logo({ className = "w-7 h-7" }: { className?: string }) {
+export function Logo({ className = "w-8 h-8" }: { className?: string }) {
   return (
     <Image
       src="/logo.png"
       alt="HireWif"
-      width={32}
-      height={32}
+      width={40}
+      height={40}
       className={className}
       priority
+      unoptimized
     />
   );
 }
