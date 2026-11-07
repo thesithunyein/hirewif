@@ -39,13 +39,15 @@ export default function Home() {
             </div>
             <div className="relative aspect-video">
               <video
-                src="/hero.mp4"
                 autoPlay
                 loop
                 muted
                 playsInline
                 className="w-full h-full object-cover"
-              />
+              >
+                <source src="/hero.webm" type="video/webm" />
+                <source src="/hero.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </section>
