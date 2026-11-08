@@ -2,6 +2,7 @@ import { createPublicClient, http, formatUnits, parseAbiItem, parseEventLogs, pa
 import { robinhood, WIF_ADDRESS } from './chain';
 import { HIRE_CONTRACT } from './config';
 import { agents } from './agents';
+import { keccak256, toBytes } from 'viem';
 
 export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as Address;
 const RPC_URL = process.env.ROBINHOOD_RPC ?? 'https://rpc.mainnet.chain.robinhood.com';
@@ -33,6 +34,7 @@ const HIRED = parseAbiItem('event Hired(address indexed user, string agent, uint
 
 type Hit = { at: number; value: unknown };
 const cache = new Map<string, Hit>();
+const redeemedHires = new Set<string>();
 
 async function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
   const hit = cache.get(key);
@@ -231,9 +233,11 @@ export async function getHires(): Promise<Hires> {
   });
 }
 
-export async function verifyHirePayment(agentId: string, txHash: Hash, payer: string): Promise<boolean> {
+export async function claimHirePayment(agentId: string, task: string, txHash: Hash, payer: string): Promise<boolean> {
   const agent = agents.find((item) => item.id === agentId);
   if (!agent) return false;
+  const claimKey = txHash.toLowerCase();
+  if (redeemedHires.has(claimKey)) return false;
 
   try {
     const receipt = await client.getTransactionReceipt({ hash: txHash });
@@ -248,7 +252,7 @@ export async function verifyHirePayment(agentId: string, txHash: Hash, payer: st
     const expectedPaid = parseUnits(String(agent.price), 18);
     const expectedBurned = (expectedPaid * 1000n) / 10_000n;
 
-    return events.some((event) => {
+    const valid = events.some((event) => {
       const args = event.args as { user?: string; agent?: string; paid?: bigint; burned?: bigint };
       return (
         event.address.toLowerCase() === HIRE_CONTRACT.toLowerCase() &&
@@ -258,6 +262,17 @@ export async function verifyHirePayment(agentId: string, txHash: Hash, payer: st
         args.burned === expectedBurned
       );
     });
+    if (!valid) return false;
+
+    // Bind the one-time redemption to the first submitted task in this runtime.
+    // The deployed contract predates task hashes, so this is the strongest server-side
+    // protection available until a task-aware contract is deployed.
+    const taskHash = keccak256(toBytes(task.trim()));
+    const redemptionKey = `${claimKey}:${taskHash}`;
+    if (redeemedHires.has(redemptionKey)) return false;
+    redeemedHires.add(claimKey);
+    redeemedHires.add(redemptionKey);
+    return true;
   } catch {
     return false;
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildReport } from '@/lib/report';
-import { verifyHirePayment } from '@/lib/wif';
+import { claimHirePayment } from '@/lib/wif';
 import { isAddress, isHash, type Hash } from 'viem';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Task is too long (500 characters max)' }, { status: 400 });
   }
 
-  const paid = await verifyHirePayment(agent, tx as Hash, user);
+  const paid = await claimHirePayment(agent, task, tx as Hash, user);
   if (!paid) {
     return NextResponse.json({ error: 'This hire transaction could not be verified. Pay for the agent first.' }, { status: 402 });
   }
