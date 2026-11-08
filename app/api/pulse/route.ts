@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFlow, getHires, getMarket } from '@/lib/wif';
+import { recordPulseSnapshot } from '@/lib/pulse-history';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,6 +11,7 @@ export async function GET() {
     getFlow(),
     getHires().catch(() => null),
   ]);
+  const history = await recordPulseSnapshot(market, flow, hires).catch(() => null);
 
   const signals: string[] = [];
   if (market) {
@@ -43,6 +45,7 @@ export async function GET() {
         : null,
       flow: flow ? { transfers: flow.transfers, hours: flow.hours } : null,
       hires: hires ? { count: hires.count, repeatUsers: hires.repeatUsers } : null,
+      history,
       signals: signals.slice(0, 4),
       updatedAt: new Date().toISOString(),
     },

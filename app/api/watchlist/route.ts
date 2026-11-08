@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { isAddress } from 'viem';
+import { getWatch, removeWatch, saveWatch } from '@/lib/watchlist';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function unavailable() {
+  return NextResponse.json(
+    { error: 'Watchlists require durable storage. Configure Upstash Redis first.' },
+    { status: 503, headers: { 'Cache-Control': 'no-store' } }
+  );
+}
+
+export async function GET(req: NextRequest) {
+  const address = req.nextUrl.searchParams.get('address') ?? '';
+  if (!isAddress(address)) return NextResponse.json({ error: 'Valid wallet address required' }, { status: 400 });
+  const watch = await getWatch(address);
+  if (!watch && !process.env.UPSTASH_REDIS_REST_URL) return unavailable();
+  return NextResponse.json({ watch }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+export async function POST(req: NextRequest) {
+  let body: { address?: string; threshold?: number };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const address = String(body.address ?? '');
+  const threshold = Number(body.threshold ?? 5);
+  if (!isAddress(address) || !Number.isFinite(threshold) || threshold < 1 || threshold > 100) {
+    return NextResponse.json({ error: 'Valid wallet address and threshold required' }, { status: 400 });
+  }
+  const watch = await saveWatch(address, threshold);
+  if (!watch) return unavailable();
+  return NextResponse.json({ watch }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+export async function DELETE(req: NextRequest) {
+  const address = req.nextUrl.searchParams.get('address') ?? '';
+  if (!isAddress(address)) return NextResponse.json({ error: 'Valid wallet address required' }, { status: 400 });
+  if (!process.env.UPSTASH_REDIS_REST_URL) return unavailable();
+  await removeWatch(address);
+  return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
+}

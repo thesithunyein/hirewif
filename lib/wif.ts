@@ -1,6 +1,6 @@
-import { createPublicClient, http, formatUnits, parseAbiItem, parseEventLogs, parseUnits, type Address, type Hash } from 'viem';
+import { createPublicClient, http, formatUnits, keccak256, parseAbiItem, parseEventLogs, parseUnits, toBytes, type Address, type Hash } from 'viem';
 import { robinhood, WIF_ADDRESS } from './chain';
-import { HIRE_CONTRACT } from './config';
+import { HIRE_CONTRACT, HIRE_CONTRACT_VERSION } from './config';
 import { agents } from './agents';
 import { claimRedemption } from './redemption';
 
@@ -31,6 +31,7 @@ const WIF_READ_ABI = [
 
 const TRANSFER = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
 const HIRED = parseAbiItem('event Hired(address indexed user, string agent, uint256 paid, uint256 burned)');
+const HIRED_V2 = parseAbiItem('event Hired(address indexed user, string agent, uint256 paid, uint256 burned, bytes32 taskHash, uint256 nonce)');
 
 type Hit = { at: number; value: unknown };
 const cache = new Map<string, Hit>();
@@ -250,7 +251,7 @@ export async function claimHirePayment(agentId: string, _task: string, txHash: H
     if (receipt.from.toLowerCase() !== payer.toLowerCase()) return false;
 
     const events = parseEventLogs({
-      abi: [HIRED],
+      abi: HIRE_CONTRACT_VERSION === 2 ? [HIRED_V2] : [HIRED],
       logs: receipt.logs,
       strict: false,
     });
@@ -258,13 +259,14 @@ export async function claimHirePayment(agentId: string, _task: string, txHash: H
     const expectedBurned = (expectedPaid * 1000n) / 10_000n;
 
     const valid = events.some((event) => {
-      const args = event.args as { user?: string; agent?: string; paid?: bigint; burned?: bigint };
+      const args = event.args as { user?: string; agent?: string; paid?: bigint; burned?: bigint; taskHash?: string };
       return (
         event.address.toLowerCase() === HIRE_CONTRACT.toLowerCase() &&
         args.user?.toLowerCase() === payer.toLowerCase() &&
         args.agent === agentId &&
         args.paid === expectedPaid &&
-        args.burned === expectedBurned
+        args.burned === expectedBurned &&
+        (HIRE_CONTRACT_VERSION === 1 || args.taskHash === keccak256(toBytes(_task.trim())))
       );
     });
     if (!valid) return false;

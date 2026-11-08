@@ -89,6 +89,8 @@ The result endpoint is payment-gated: an unpaid request is rejected, and a confi
 
 For multi-instance production, configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The result service uses an atomic Redis claim so the same hire cannot be redeemed twice across server instances. Without those variables, production redemption fails closed unless `ALLOW_EPHEMERAL_REDEMPTIONS=true` is explicitly set for a temporary single-instance deployment.
 
+To activate the task-bound V2 contract after deployment, set `NEXT_PUBLIC_HIRE_CONTRACT` to its address and `NEXT_PUBLIC_HIRE_CONTRACT_VERSION=2` in the hosting environment, then redeploy the app. Until both variables are set, the app intentionally continues using the audited V1 address.
+
 ## Pricing and payouts
 
 Four agents, priced by the site:

@@ -3,9 +3,10 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { WIF_ADDRESS, WIF_ABI, robinhood } from '@/lib/chain';
 import { HIRE_CONTRACT, BURN_BPS } from '@/lib/config';
-import { parseUnits } from 'viem';
+import { keccak256, parseUnits, toBytes } from 'viem';
 import { Icon } from './Icon';
 import { useState, useEffect } from 'react';
+import { HIRE_CONTRACT_VERSION } from '@/lib/config';
 
 const HIRE_ABI = [
   {
@@ -15,6 +16,20 @@ const HIRE_ABI = [
     inputs: [
       { name: 'agent', type: 'string' },
       { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+] as const;
+const HIRE_V2_ABI = [
+  {
+    name: 'hire',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'agent', type: 'string' },
+      { name: 'amount', type: 'uint256' },
+      { name: 'taskHash', type: 'bytes32' },
+      { name: 'nonce', type: 'uint256' },
     ],
     outputs: [],
   },
@@ -42,10 +57,14 @@ export function AgentCard({ agent }: { agent: Agent }) {
   const [shared, setShared] = useState(false);
   const [reportUrl, setReportUrl] = useState('');
   const [step, setStep] = useState<'idle' | 'approving' | 'hiring' | 'done'>('idle');
+  const [intent, setIntent] = useState<{ taskHash: `0x${string}`; nonce: bigint } | null>(null);
 
   const amount = parseUnits(agent.price.toString(), 18);
   const burn = Math.floor(agent.price * BURN_BPS / 10000);
   const toOperator = agent.price - burn;
+  const hireArgs = HIRE_CONTRACT_VERSION === 2 && intent
+    ? [agent.id, amount, intent.taskHash, intent.nonce] as const
+    : [agent.id, amount] as const;
 
   const { data: allowance } = useReadContract({
     address: WIF_ADDRESS,
@@ -60,6 +79,13 @@ export function AgentCard({ agent }: { agent: Agent }) {
 
   const handleHire = () => {
     if (!isConnected || !task.trim()) return;
+    const nextIntent = HIRE_CONTRACT_VERSION === 2
+      ? { taskHash: keccak256(toBytes(task.trim())), nonce: BigInt(Date.now()) }
+      : null;
+    setIntent(nextIntent);
+    const nextArgs = HIRE_CONTRACT_VERSION === 2 && nextIntent
+      ? [agent.id, amount, nextIntent.taskHash, nextIntent.nonce] as const
+      : [agent.id, amount] as const;
     if (needsApproval) {
       setStep('approving');
       writeContract({
@@ -73,9 +99,9 @@ export function AgentCard({ agent }: { agent: Agent }) {
       setStep('hiring');
       writeContract({
         address: HIRE_CONTRACT,
-        abi: HIRE_ABI,
+        abi: HIRE_CONTRACT_VERSION === 2 ? HIRE_V2_ABI : HIRE_ABI,
         functionName: 'hire',
-        args: [agent.id, amount],
+        args: nextArgs,
         chainId: robinhood.id,
       });
     }
@@ -88,9 +114,9 @@ export function AgentCard({ agent }: { agent: Agent }) {
       reset();
       writeContract({
         address: HIRE_CONTRACT,
-        abi: HIRE_ABI,
+        abi: HIRE_CONTRACT_VERSION === 2 ? HIRE_V2_ABI : HIRE_ABI,
         functionName: 'hire',
-        args: [agent.id, amount],
+        args: hireArgs,
         chainId: robinhood.id,
       });
     } else if (step === 'hiring' && !result && !loadingResult) {
