@@ -40,6 +40,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
   const [result, setResult] = useState('');
   const [loadingResult, setLoadingResult] = useState(false);
   const [shared, setShared] = useState(false);
+  const [reportUrl, setReportUrl] = useState('');
   const [step, setStep] = useState<'idle' | 'approving' | 'hiring' | 'done'>('idle');
 
   const amount = parseUnits(agent.price.toString(), 18);
@@ -107,6 +108,17 @@ export function AgentCard({ agent }: { agent: Agent }) {
         })
         .then((data: { result?: string; updatedAt?: string }) => {
           setResult(data.result || 'No data returned.');
+          const params = new URLSearchParams({
+            agent: agent.id,
+            name: agent.name,
+            task,
+            result: data.result || 'No data returned.',
+            price: String(agent.price),
+            burn: String(burn),
+            operator: String(toOperator),
+            tx: hash || '',
+          });
+          setReportUrl(`${window.location.origin}/report?${params.toString()}`);
           const entry = {
             agent: agent.name,
             task,
@@ -127,8 +139,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
   const busy = isPending || isConfirming;
   const shareResult = async () => {
     try {
-      const tx = hash ? `https://robinhoodchain.blockscout.com/tx/${hash}` : '';
-      const text = `${agent.name} report\n\n${result}\n\n${tx}`.trim();
+      const text = `${agent.name} report\n\n${result}\n\n${reportUrl}`.trim();
       if (navigator.share) {
         await navigator.share({ title: `${agent.name} report · HireWif`, text });
       } else {
@@ -142,7 +153,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="border border-line bg-paper p-6 flex flex-col gap-5 hover:border-muted transition-colors">
+    <div id={`agent-${agent.id}`} className="border border-line bg-paper p-6 flex flex-col gap-5 hover:border-muted transition-colors">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider">{agent.role}</div>
@@ -219,6 +230,16 @@ export function AgentCard({ agent }: { agent: Agent }) {
               >
                 {shared ? 'Copied report' : 'Share this report'}
               </button>
+              {reportUrl && (
+                <a
+                  href={reportUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block min-h-10 pt-2 text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                >
+                  Open public report
+                </a>
+              )}
             </>
           )}
         </div>
