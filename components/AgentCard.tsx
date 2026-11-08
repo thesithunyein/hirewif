@@ -222,7 +222,13 @@ export function AgentCard({ agent }: { agent: Agent }) {
           {loadingResult && <div className="text-muted">Getting your answer…</div>}
           {result && (
             <>
-              <pre className="text-xs whitespace-pre-wrap text-ink bg-soft p-3 rounded">{result}</pre>
+              <details className="group">
+                <summary className="inline-flex min-h-10 cursor-pointer items-center text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2">
+                  <span className="group-open:hidden">View answer</span>
+                  <span className="hidden group-open:inline">Hide answer</span>
+                </summary>
+                <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-ink bg-soft p-3 rounded">{result}</pre>
+              </details>
               <button
                 type="button"
                 onClick={shareResult}
