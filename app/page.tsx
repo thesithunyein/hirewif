@@ -82,7 +82,7 @@ export default function Home() {
             <div className="space-y-8 max-w-2xl">
               <div>
                 <h3 className="font-medium mb-1">What can I ask?</h3>
-                <p className="text-sm text-muted leading-relaxed">Track a wallet’s WIF activity and compare with your previous paid report, or ask for market, transfer, supply and marketplace data. Built-in reports name their sources; independent agents deliver through their own HTTPS endpoints.</p>
+                <p className="text-sm text-muted leading-relaxed">WIF price and volume, onchain transfers, supply and burns, and every hire on this marketplace. Each answer is read from DexScreener and Robinhood Chain when you ask.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">How do I pay?</h3>
@@ -90,7 +90,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-medium mb-1">When do I get the result?</h3>
-                <p className="text-sm text-muted leading-relaxed">After your payment confirms, sign a free message to unlock delivery. Reports can take several seconds. If delivery fails, retry the same paid request without another payment. Payments are final; there is no automatic refund.</p>
+                <p className="text-sm text-muted leading-relaxed">Right after the transaction confirms, usually in under a second. There is no queue and no offchain wait.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">Is this on mainnet?</h3>
