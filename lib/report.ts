@@ -1,4 +1,5 @@
 import { getMarket, getOnchain, getFlow, getHires, getBlockTimes, type Hire } from './wif';
+import { BURN_ADDRESS, HIRE_CONTRACT, WIF_ADDRESS } from './wif';
 
 type Section = 'market' | 'onchain' | 'flow' | 'hires';
 
@@ -49,6 +50,14 @@ const num = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 
 const pct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 const addr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const pad = (s: string, n: number) => (s.length >= n ? s : s + ' '.repeat(n - s.length));
+const labelAddress = (a: string) => {
+  const lower = a.toLowerCase();
+  if (lower === BURN_ADDRESS.toLowerCase()) return 'burn address';
+  if (lower === HIRE_CONTRACT.toLowerCase()) return 'HireWif contract';
+  if (lower === '0x7a35f63f81357dade2cff8f5699b935786aa9da2') return 'operator';
+  if (lower === WIF_ADDRESS.toLowerCase()) return 'WIF token';
+  return addr(a);
+};
 
 function ago(unix: number): string {
   const mins = Math.max(0, Math.round((Date.now() / 1000 - unix) / 60));
@@ -107,12 +116,18 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
           'lower activity relative to displayed liquidity';
         lines.push(`  signal: ${momentum}; ${liquidity}.`);
         lines.push(`  context: ${pct(market.change24h)} over 24h, ${usd(market.volume24h)} volume against ${usd(market.liquidityUsd)} liquidity.`);
+        if (/buy|sell|trade|entry|exit/i.test(task)) {
+          lines.push(`  user focus: ${market.buys24h >= market.sells24h ? 'buys currently outnumber sells' : 'sells currently outnumber buys'} (${num(market.buys24h)} buys vs ${num(market.sells24h)} sells).`);
+        }
       }
       if (onchain) {
         const burnedShare = onchain.supply > 0 ? (onchain.burned / onchain.supply) * 100 : 0;
         lines.push(
           `  supply: ${burnedShare.toFixed(4)}% of reported supply is held by the burn address; the hire contract currently holds ${num(onchain.hireContractBalance)} WIF because hires are split immediately.`
         );
+        if (/burn|supply|tokenomics/i.test(task)) {
+          lines.push(`  user focus: the reported burn balance is the directly observable supply-reduction signal; it does not prove future burns.`);
+        }
       }
       if (hires) {
         const topAgent = hires.agents[0];
@@ -121,7 +136,8 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
         );
       }
       lines.push('  decision note: this is a current-data brief, not a price prediction or a recommendation to buy or sell.');
-      lines.push('  confidence: conclusions are limited to the sources and time windows shown below; no historical baseline or wallet-label analysis is included.');
+      lines.push('  risk check: liquidity, concentration, and short-term volume can change quickly; large transfers are signals to investigate, not proof of intent.');
+      lines.push('  confidence: conclusions are limited to the sources and time windows shown below. This report has no historical baseline and does not identify unknown wallet owners.');
     }
     lines.push('');
   }
@@ -170,7 +186,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
       if (flow.largest.length) {
         lines.push('  largest:');
         for (const t of flow.largest) {
-          lines.push(`    ${num(t.value)} WIF  ${addr(t.from)} → ${addr(t.to)}  tx ${addr(t.tx)}`);
+          lines.push(`    ${num(t.value)} WIF  ${labelAddress(t.from)} → ${labelAddress(t.to)}  tx ${addr(t.tx)}`);
         }
       }
       sources.push('Robinhood Chain RPC · WIF Transfer logs · https://robinhoodchain.blockscout.com/token/0x5173b8eA6923c2d40267890D45C46a3480954773');

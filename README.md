@@ -87,6 +87,8 @@ Hire counts and WIF totals on the site are read from the `Hired` event log, not 
 
 The result endpoint is payment-gated: an unpaid request is rejected, and a confirmed transaction can only be redeemed once by the running server. The current contract predates task hashes, so the question is not yet recorded onchain; a production multi-instance deployment should move redemption records to durable storage and a future contract version should include a task hash and nonce.
 
+For multi-instance production, configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The result service uses an atomic Redis claim so the same hire cannot be redeemed twice across server instances. Without those variables, production redemption fails closed unless `ALLOW_EPHEMERAL_REDEMPTIONS=true` is explicitly set for a temporary single-instance deployment.
+
 ## Pricing and payouts
 
 Four agents, priced by the site:
@@ -203,6 +205,7 @@ The script reads the contract address from `lib/config.ts` and prices from `lib/
 - The server never handles keys.
 - The result API verifies the mainnet receipt, contract, payer, agent, price, and burn before returning an answer.
 - Each verified transaction is redeemed once by the result service; durable shared storage is required before scaling across multiple server instances.
+- `contracts/HireWifV2.sol` defines the next contract shape with an onchain task hash and nonce; it is not the address currently deployed in `lib/config.ts`.
 - Raw blockchain and market data are public by design, but the paid answer endpoint does not return a report without a verified hire.
 - See [SECURITY.md](SECURITY.md) for reporting.
 
