@@ -1,5 +1,6 @@
 import { getMarket, getOnchain, getFlow, getHires, getBlockTimes, type Hire } from './wif';
 import { BURN_ADDRESS, HIRE_CONTRACT, WIF_ADDRESS } from './wif';
+import { recordMarketSnapshot } from './history';
 
 type Section = 'market' | 'onchain' | 'flow' | 'hires';
 
@@ -90,6 +91,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
   const blocks = need.has('hires') && hires?.recent.length
     ? await getBlockTimes(hires.recent.map((h) => h.block))
     : new Map<number, number>();
+  const previousMarket = agent === 'research' && market ? await recordMarketSnapshot(market).catch(() => null) : null;
 
   const lines: string[] = [];
   const sources: string[] = [];
@@ -116,6 +118,17 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
           'lower activity relative to displayed liquidity';
         lines.push(`  signal: ${momentum}; ${liquidity}.`);
         lines.push(`  context: ${pct(market.change24h)} over 24h, ${usd(market.volume24h)} volume against ${usd(market.liquidityUsd)} liquidity.`);
+        if (previousMarket) {
+          const priceDelta = previousMarket.priceUsd > 0
+            ? ((market.priceUsd - previousMarket.priceUsd) / previousMarket.priceUsd) * 100
+            : 0;
+          const liquidityDelta = previousMarket.liquidityUsd > 0
+            ? ((market.liquidityUsd - previousMarket.liquidityUsd) / previousMarket.liquidityUsd) * 100
+            : 0;
+          lines.push(`  baseline: since the previous saved snapshot (${new Date(previousMarket.at).toISOString().slice(0, 16)} UTC), price is ${pct(priceDelta)} and liquidity is ${pct(liquidityDelta)}.`);
+        } else {
+          lines.push('  baseline: no saved hourly snapshot yet; comparison will appear after the service has observed this market for at least one hour.');
+        }
         if (/buy|sell|trade|entry|exit/i.test(task)) {
           lines.push(`  user focus: ${market.buys24h >= market.sells24h ? 'buys currently outnumber sells' : 'sells currently outnumber buys'} (${num(market.buys24h)} buys vs ${num(market.sells24h)} sells).`);
         }
@@ -132,7 +145,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
       if (hires) {
         const topAgent = hires.agents[0];
         lines.push(
-          `  traction: ${num(hires.count)} recorded hire${hires.count === 1 ? '' : 's'}, ${num(hires.paid)} WIF paid, and ${num(hires.burned)} WIF burned${topAgent ? `; ${topAgent.agent} leads usage with ${topAgent.hires} hire${topAgent.hires === 1 ? '' : 's'}` : ''}.`
+          `  traction: ${num(hires.count)} recorded hire${hires.count === 1 ? '' : 's'} from ${num(hires.uniqueUsers)} wallet${hires.uniqueUsers === 1 ? '' : 's'}, ${num(hires.paid)} WIF paid, and ${num(hires.burned)} WIF burned${hires.repeatUsers ? `; ${num(hires.repeatUsers)} wallet${hires.repeatUsers === 1 ? '' : 's'} returned` : '; no repeat wallet is recorded yet'}${topAgent ? `; ${topAgent.agent} leads usage with ${topAgent.hires} hire${topAgent.hires === 1 ? '' : 's'}` : ''}.`
         );
       }
       lines.push('  decision note: this is a current-data brief, not a price prediction or a recommendation to buy or sell.');
@@ -206,6 +219,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
       lines.push(`  ${pad('hires', 15)}${num(hires.count)}`);
       lines.push(`  ${pad('paid', 15)}${num(hires.paid)} WIF`);
       lines.push(`  ${pad('burned', 15)}${num(hires.burned)} WIF`);
+      lines.push(`  ${pad('wallets', 15)}${num(hires.uniqueUsers)} unique · ${num(hires.repeatUsers)} repeat`);
       if (hires.agents.length) {
         lines.push('  agents hired:');
         for (const e of hires.agents.slice(0, 4)) {

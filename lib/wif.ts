@@ -180,6 +180,8 @@ export type Hires = {
   count: number;
   paid: number;
   burned: number;
+  uniqueUsers: number;
+  repeatUsers: number;
   recent: Hire[];
   agents: { agent: string; paid: number; hires: number }[];
 };
@@ -212,15 +214,20 @@ export async function getHires(): Promise<Hires> {
       }));
 
       const byAgent = new Map<string, { paid: number; hires: number }>();
+      const byUser = new Map<string, number>();
       for (const h of hires) {
         const cur = byAgent.get(h.agent) ?? { paid: 0, hires: 0 };
         byAgent.set(h.agent, { paid: cur.paid + h.paid, hires: cur.hires + 1 });
+        const user = h.user.toLowerCase();
+        byUser.set(user, (byUser.get(user) ?? 0) + 1);
       }
 
       return {
         count: hires.length,
         paid: hires.reduce((a, h) => a + h.paid, 0),
         burned: hires.reduce((a, h) => a + h.burned, 0),
+        uniqueUsers: byUser.size,
+        repeatUsers: [...byUser.values()].filter((count) => count > 1).length,
         recent: [...hires].sort((a, b) => b.block - a.block).slice(0, 5),
         agents: [...byAgent.entries()]
           .map(([agent, v]) => ({ agent, ...v }))
