@@ -40,39 +40,44 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-            <div className="w-full max-w-lg mx-auto lg:mx-0 border border-line bg-white p-6 sm:p-8">
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span className="uppercase tracking-wider">Live proof</span>
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
-                  Mainnet
-                </span>
-              </div>
-              <div className="mt-10">
-                <div className="text-sm text-muted">Monitor hire</div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="font-mono tabular-nums text-4xl font-medium">250</span>
-                  <span className="text-sm text-muted">WIF paid</span>
+            <div className="proof-card-wrap w-full max-w-lg mx-auto lg:mx-0">
+              <div className="proof-card">
+                <div className="proof-card__shine" aria-hidden="true" />
+                <div className="relative">
+                  <div className="flex items-center justify-between text-xs text-muted">
+                    <span className="uppercase tracking-wider">Live proof</span>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+                      Mainnet
+                    </span>
+                  </div>
+                  <div className="mt-10">
+                    <div className="text-sm text-muted">Monitor hire</div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="font-mono tabular-nums text-4xl font-medium">250</span>
+                      <span className="text-sm text-muted">WIF paid</span>
+                    </div>
+                  </div>
+                  <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
+                    <div className="proof-card__metric">
+                      <div className="text-xs text-muted">Burned</div>
+                      <div className="mt-1 font-mono tabular-nums">25 WIF</div>
+                    </div>
+                    <div className="proof-card__metric">
+                      <div className="text-xs text-muted">Operator</div>
+                      <div className="mt-1 font-mono tabular-nums">225 WIF</div>
+                    </div>
+                  </div>
+                  <a
+                    href="https://robinhoodchain.blockscout.com/tx/0x0aed9c531acc7da395e8e8146d4e3635ba0cd9bd88e16ad947f288661bd4d73a"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-6 inline-flex min-h-10 items-center text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                  >
+                    Inspect the transaction
+                  </a>
                 </div>
               </div>
-              <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
-                <div className="border border-line p-3">
-                  <div className="text-xs text-muted">Burned</div>
-                  <div className="mt-1 font-mono tabular-nums">25 WIF</div>
-                </div>
-                <div className="border border-line p-3">
-                  <div className="text-xs text-muted">Operator</div>
-                  <div className="mt-1 font-mono tabular-nums">225 WIF</div>
-                </div>
-              </div>
-              <a
-                href="https://robinhoodchain.blockscout.com/tx/0x0aed9c531acc7da395e8e8146d4e3635ba0cd9bd88e16ad947f288661bd4d73a"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-6 inline-flex min-h-10 items-center text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-              >
-                Inspect the transaction
-              </a>
             </div>
           </div>
         </section>
