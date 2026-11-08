@@ -3,6 +3,7 @@ import { agents } from '@/lib/agents';
 import { getHires } from '@/lib/wif';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   const hires = await getHires().catch(() => null);
@@ -17,9 +18,12 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({
-    agents: list,
-    chainOk: hires !== null,
-    updatedAt: new Date().toISOString(),
-  });
+  return NextResponse.json(
+    {
+      agents: list,
+      chainOk: hires !== null,
+      updatedAt: new Date().toISOString(),
+    },
+    { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+  );
 }

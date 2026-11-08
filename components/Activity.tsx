@@ -30,7 +30,7 @@ export function Activity() {
   useEffect(() => {
     let alive = true;
     const load = () =>
-      fetch('/api/stats')
+      fetch('/api/stats', { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((d: Stats) => {
           if (alive) {

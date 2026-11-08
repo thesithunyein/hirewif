@@ -11,7 +11,7 @@ export function AgentDirectory() {
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(() => {
-    fetch('/api/agents')
+    fetch('/api/agents', { cache: 'no-store' })
       .then(async (r) => {
         if (!r.ok) throw new Error('chain read failed');
         return r.json();
