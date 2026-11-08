@@ -23,13 +23,43 @@ const usd = (n: number) => n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(6)}`;
 export function Pulse() {
   const [data, setData] = useState<PulseData | null>(null);
   const [failed, setFailed] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [lastVisit, setLastVisit] = useState<{ at: number; priceUsd: number; change24h: number } | null>(null);
 
   useEffect(() => {
+    const saved = localStorage.getItem('hirewif-follow-wif');
+    setFollowing(saved === 'true');
+    const previous = localStorage.getItem('hirewif-pulse-last-visit');
+    if (previous) {
+      try {
+        setLastVisit(JSON.parse(previous));
+      } catch {
+        localStorage.removeItem('hirewif-pulse-last-visit');
+      }
+    }
     fetch('/api/pulse', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('pulse unavailable'))))
-      .then((value: PulseData) => setData(value))
+      .then((value: PulseData) => {
+        setData(value);
+        if (value.market) {
+          localStorage.setItem(
+            'hirewif-pulse-last-visit',
+            JSON.stringify({ at: Date.now(), priceUsd: value.market.priceUsd, change24h: value.market.change24h })
+          );
+        }
+      })
       .catch(() => setFailed(true));
   }, []);
+
+  const toggleFollowing = () => {
+    const next = !following;
+    setFollowing(next);
+    localStorage.setItem('hirewif-follow-wif', String(next));
+  };
+
+  const sinceLastVisit = data?.market && lastVisit && lastVisit.priceUsd > 0
+    ? ((data.market.priceUsd - lastVisit.priceUsd) / lastVisit.priceUsd) * 100
+    : null;
 
   return (
     <section className="mb-14 border-y border-line py-8">
@@ -41,12 +71,23 @@ export function Pulse() {
             A live signal layer for WIF. Check back when the market moves, then pay an agent to explain what matters.
           </p>
         </div>
-        <Link
-          href="#agent-research"
-          className="inline-flex min-h-10 items-center border border-line px-3 text-xs hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-        >
-          Unlock deep read
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={toggleFollowing}
+            className={`inline-flex min-h-10 items-center border px-3 text-xs transition-colors duration-100 ease-out active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
+              following ? 'border-ink bg-ink text-paper' : 'border-line hover:border-ink'
+            }`}
+          >
+            {following ? 'Following WIF' : 'Follow WIF'}
+          </button>
+          <Link
+            href="#agent-research"
+            className="inline-flex min-h-10 items-center border border-line px-3 text-xs hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+          >
+            Unlock deep read
+          </Link>
+        </div>
       </div>
 
       {failed ? (
@@ -81,8 +122,14 @@ export function Pulse() {
               </ul>
             </div>
           )}
+          {sinceLastVisit !== null && (
+            <div className="mt-4 border-t border-line pt-4 text-sm">
+              <span className="font-medium">Since your last visit:</span>{' '}
+              WIF is {sinceLastVisit >= 0 ? 'up' : 'down'} {Math.abs(sinceLastVisit).toFixed(2)}%.
+            </div>
+          )}
           <div className="mt-4 text-xs text-muted">
-            Updated {new Date(data.updatedAt).toISOString().slice(11, 16)} UTC · free headline, paid explanation
+            Updated {new Date(data.updatedAt).toISOString().slice(11, 16)} UTC · {following ? 'your watch is saved on this device' : 'follow WIF to track changes when you return'}
           </div>
         </>
       )}
