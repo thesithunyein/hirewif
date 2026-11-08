@@ -38,7 +38,7 @@ Each agent answers with numbers and names the source. No model writes the answer
 | Agent | Price | What it returns |
 |---|---|---|
 | Monitor | 2,000 WIF | Price, market cap, liquidity, 24h volume and buy/sell counts from DexScreener, plus the largest WIF transfers onchain |
-| Ledger | 3,000 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which payees are earning |
+| Ledger | 3,000 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which agents were hired |
 | Data | 5,000 WIF | Supply, burn-address balance, and transfer flow computed from the last 200,000 blocks of WIF logs |
 | Research | 8,000 WIF | Market, supply and hire data in one brief, with every number tied to its source |
 
@@ -50,12 +50,12 @@ Data sources: DexScreener for market data, `eth_getLogs` and `eth_call` against 
 sequenceDiagram
     participant U as User
     participant C as HireWif Contract
-    participant P as Agent payee
+    participant O as Operator
     participant B as Burn
 
     U->>C: approve WIF
     U->>C: hire(agent, amount)
-    C->>P: 90%
+    C->>O: 90%
     C->>B: 10%
     C-->>U: Hired event
     U->>U: result built from live data
@@ -63,35 +63,39 @@ sequenceDiagram
 
 1. Connect a wallet on Robinhood Chain (4663).
 2. Pick an agent and describe the task.
-3. Approve and hire. The contract enforces the listed price and splits the payment.
+3. Approve and hire. The contract splits the payment and writes a `Hired` event.
 4. The server builds the answer from live data and returns it with the tx hash.
+
+The price is set by the site in `lib/agents.ts`. The deployed contract accepts any amount and does not check it against a registry, so the amount is the client's choice rather than an onchain constraint. Anyone reading the page can send any amount through the contract directly.
 
 Hire counts and WIF totals on the site are read from the `Hired` event log, not from browser storage. Local storage only holds your own history.
 
-## Supply side
+## Pricing and payouts
 
-Anyone can list an agent. `listAgent(agent, payee, price)` registers an id and a payee address, and the payee keeps 90% of every hire. The contract enforces the price, so a listed agent cannot be hired for less than it asked.
+Four agents, priced by the site:
 
-```
-you set id "wallet-watch" at 2,500 WIF
-a hire at 2,500 WIF pays you 2,250 and burns 250
-```
+| Agent | Price |
+|---|---|
+| Monitor | 2,000 WIF |
+| Ledger | 3,000 WIF |
+| Data | 5,000 WIF |
+| Research | 8,000 WIF |
 
-The four built-in ids are seeded to the operator in the constructor and cannot be taken over.
+Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the constructor. There is no third-party payee on the deployed contract.
 
 ## Stack
 
 - Next.js 14 (App Router, TypeScript)
 - Tailwind CSS
 - wagmi + viem
-- Solidity 0.8.24, Foundry for tests
+- Solidity 0.8.34, Foundry for tests
 
 ## Project structure
 
 ```
 hirewif/
 ├── app/
-│   ├── api/agents/route.ts    # Directory: chain registry + earnings
+│   ├── api/agents/route.ts    # Agent list + per-agent hire totals
 │   ├── api/result/route.ts    # Builds the answer from live data
 │   ├── api/stats/route.ts     # Counters read from Hired events
 │   ├── marketplace/page.tsx   # Agent marketplace
@@ -101,13 +105,12 @@ hirewif/
 │   ├── Activity.tsx           # Onchain counters + latest hires
 │   ├── AgentCard.tsx          # Approve, hire, result
 │   ├── AgentDirectory.tsx     # Live directory
-│   ├── ListAgentForm.tsx      # listAgent write flow
 │   ├── ConnectButton.tsx
 │   └── History.tsx            # Your own hires
 ├── contracts/
-│   └── HireWif.sol            # 90/10 split, burn, per-agent payee
+│   └── HireWif.sol            # Deployed contract: 90/10 split, no registry
 ├── lib/
-│   ├── agents.ts              # Built-in agents
+│   ├── agents.ts              # Agent catalog and prices
 │   ├── chain.ts
 │   ├── config.ts              # Contract address, operator
 │   ├── report.ts              # Answer builder
@@ -115,7 +118,7 @@ hirewif/
 ├── scripts/
 │   └── seed.mjs               # Seeds hires against the deployed contract
 ├── test/
-│   └── HireWif.t.sol          # 12 Foundry tests
+│   └── HireWif.t.sol          # 8 Foundry tests
 └── README.md
 ```
 
@@ -126,18 +129,19 @@ hirewif/
 | Address | `0x423B8701Da3a251a3A3fc2d241b71e8d05744C91` |
 | Chain | Robinhood Chain (4663) |
 | Token | $WIF `0x5173b8eA6923c2d40267890D45C46a3480954773` |
-| Split | 90% payee / 10% burn |
-| Events | `Hired`, `AgentListed` |
+| Split | 90% operator / 10% burn |
+| Events | `Hired` |
+| Compiler | solc 0.8.34, optimizer off |
 
 Source: `contracts/HireWif.sol`
 
 ```solidity
 function hire(string calldata agent, uint256 amount) external;
-function listAgent(string calldata agent, address payee, uint256 price) external;
-function agentInfo(string calldata agent) external view returns (address payee, uint256 price);
 ```
 
-`hire` reads the registered price and requires `amount` to match it, so the sell side sets its own terms. Unlisted ids fall back to the operator, which keeps older clients working.
+That is the entire mutating surface: four public members — `WIF()`, `BURN()`, `operator()`, `hire()`. The operator is fixed at deploy and there is no owner, pause, upgrade or withdrawal path.
+
+Building this source with solc 0.8.34 and the optimizer off reproduces the deployed runtime bytecode; only the trailing metadata hash differs.
 
 ## Run locally
 
@@ -171,13 +175,13 @@ Then put the printed address in `lib/config.ts` as `HIRE_CONTRACT`.
 read -rsp "private key: " PK && echo && PK=$PK node scripts/seed.mjs
 ```
 
-The script reads the contract address from `lib/config.ts`, prints the quoted price for each agent, refuses to run if the wallet is short on WIF or ETH, and approves only the exact total.
+The script reads the contract address from `lib/config.ts` and prices from `lib/agents.ts`, refuses to run if the wallet is short on WIF or ETH, and approves only the exact total.
 
 ## Security
 
-- Prices and payees live in the contract, not in the frontend.
-- No admin keys. Operator is set at deploy and can only reprice or relist the built-in agent ids.
-- `listAgent` requires `payee == msg.sender`, so an id cannot be listed on someone else's behalf.
+- The deployed contract is 60 lines. No owner, pause, upgrade, rescue or withdrawal function.
+- The operator address is fixed by the constructor and cannot be changed afterwards.
+- The burn address is a constant, so the 10% cannot be redirected.
 - Approvals are for the exact hire amount. Users keep custody of their $WIF.
 - The server never handles keys.
 - See [SECURITY.md](SECURITY.md) for reporting.

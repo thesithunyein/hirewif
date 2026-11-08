@@ -86,7 +86,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-medium mb-1">How do I pay?</h3>
-                <p className="text-sm text-muted leading-relaxed">Connect your wallet on Robinhood Chain and pay in $WIF. 10% of every hire is burned, 90% goes to the agent.</p>
+                <p className="text-sm text-muted leading-relaxed">Connect your wallet on Robinhood Chain and pay in $WIF. 10% of every hire is burned; the other 90% goes to the operator who runs that agent.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">When do I get the result?</h3>

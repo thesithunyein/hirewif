@@ -18,10 +18,7 @@ const robinhood = defineChain({
   blockExplorers: { default: { name: 'Blockscout', url: EXPLORER } },
 });
 
-const HIRE_ABI = parseAbi([
-  'function hire(string agent, uint256 amount)',
-  'function agentInfo(string agent) view returns (address payee, uint256 price)',
-]);
+const HIRE_ABI = parseAbi(['function hire(string agent, uint256 amount)']);
 const WIF_ABI = parseAbi([
   'function balanceOf(address account) view returns (uint256)',
   'function allowance(address owner, address spender) view returns (uint256)',
@@ -49,7 +46,19 @@ async function main() {
   const wallet = createWalletClient({ account, chain: robinhood, transport: http(RPC) });
 
   const ids = process.argv.slice(2);
-  const requested = ids.length ? ids : ['monitor', 'ledger', 'data', 'research'];
+
+  // The contract has no price registry, so the catalog in lib/agents.ts is the only
+  // source of truth for what a hire costs. Read it instead of hardcoding a second copy.
+  const catalog = readFileSync(new URL('../lib/agents.ts', import.meta.url), 'utf8');
+  const prices = new Map(
+    [...catalog.matchAll(/id:\s*'([^']+)'[\s\S]*?price:\s*([\d_]+)/g)].map((m) => [
+      m[1],
+      BigInt(m[2].replace(/_/g, '')) * 10n ** 18n,
+    ])
+  );
+  if (!prices.size) return fail('Could not read agent prices from lib/agents.ts.');
+
+  const requested = ids.length ? ids : [...prices.keys()];
 
   console.log(`hire contract ${hireContract}`);
   console.log(`paying from   ${account.address}`);
@@ -59,23 +68,12 @@ async function main() {
 
   const quotes = [];
   for (const id of requested) {
-    try {
-      const [payee, price] = await pub.readContract({
-        address: hireContract,
-        abi: HIRE_ABI,
-        functionName: 'agentInfo',
-        args: [id],
-      });
-      if (price === 0n) {
-        console.error(`"${id}" is not listed on this contract. Skipping rather than guessing a price.`);
-        continue;
-      }
-      quotes.push({ id, payee, price });
-    } catch {
-      return fail(
-        `agentInfo("${id}") reverted. This address looks like the old contract, which had no registry. Deploy the new one, point lib/config.ts at it, then rerun.`
-      );
+    const price = prices.get(id);
+    if (!price) {
+      console.error(`"${id}" is not in lib/agents.ts. Skipping rather than guessing a price.`);
+      continue;
     }
+    quotes.push({ id, price });
   }
 
   if (!quotes.length) return fail('Nothing to hire.');
@@ -98,7 +96,7 @@ async function main() {
   console.log(`WIF           ${formatUnits(wifBalance, 18)}`);
   console.log(`needed        ${formatUnits(total, 18)} WIF`);
   for (const q of quotes) {
-    console.log(`  ${q.id.padEnd(10)} ${formatUnits(q.price, 18).padStart(10)} WIF -> ${q.payee}`);
+    console.log(`  ${q.id.padEnd(10)} ${formatUnits(q.price, 18).padStart(10)} WIF`);
   }
 
   if (wifBalance < total) {

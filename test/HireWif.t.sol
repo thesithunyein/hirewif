@@ -7,6 +7,7 @@ interface Vm {
     function prank(address sender) external;
     function etch(address target, bytes calldata code) external;
     function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData, address emitter) external;
+    function expectRevert() external;
 }
 
 abstract contract BaseTest {
@@ -18,14 +19,6 @@ abstract contract BaseTest {
 
     function assertEq(address a, address b, string memory msg_) internal pure {
         require(a == b, msg_);
-    }
-
-    function assertEq(string memory a, string memory b, string memory msg_) internal pure {
-        require(keccak256(bytes(a)) == keccak256(bytes(b)), msg_);
-    }
-
-    function fail(string memory msg_) internal pure {
-        require(false, msg_);
     }
 }
 
@@ -62,15 +55,13 @@ contract MockWIF {
 }
 
 contract HireWifTest is BaseTest {
-    event Hired(address indexed user, string agent, address indexed payee, uint256 paid, uint256 burned);
-    event AgentListed(string agent, address indexed payee, uint256 price);
+    event Hired(address indexed user, string agent, uint256 paid, uint256 burned);
 
     HireWif hw;
     MockWIF wif;
 
     address constant OP = address(0xA11CE);
     address constant USER = address(0xB0B);
-    address constant OTHER = address(0xCAFE);
 
     function setUp() public {
         hw = new HireWif(OP);
@@ -84,101 +75,63 @@ contract HireWifTest is BaseTest {
         wif.approve(address(hw), type(uint256).max);
     }
 
-    function testSplitIs90_10() public {
+    function testConstructorSetsOperator() public view {
+        assertEq(hw.operator(), OP, "operator should be the constructor argument");
+    }
+
+    function testConstantsMatchDeployment() public view {
+        assertEq(hw.WIF(), 0x5173b8eA6923c2d40267890D45C46a3480954773, "WIF address");
+        assertEq(hw.BURN(), 0x000000000000000000000000000000000000dEaD, "burn address");
+    }
+
+    function testSplitIs90ToOperator10Burned() public {
         vm.prank(USER);
         hw.hire("research", 8_000e18);
 
         assertEq(wif.balanceOf(hw.BURN()), 800e18, "burn should be 10%");
         assertEq(wif.balanceOf(OP), 7_200e18, "operator should get 90%");
+        assertEq(wif.balanceOf(USER), 992_000e18, "user should pay exactly the amount");
         assertEq(wif.balanceOf(address(hw)), 0, "contract should keep nothing");
     }
 
     function testEmitsHired() public {
-        vm.expectEmit(true, true, false, true, address(hw));
-        emit Hired(USER, "research", OP, 8_000e18, 800e18);
+        vm.expectEmit(true, false, false, true, address(hw));
+        emit Hired(USER, "research", 8_000e18, 800e18);
         vm.prank(USER);
         hw.hire("research", 8_000e18);
     }
 
-    function testListedAgentEarnsTheSplit() public {
-        vm.prank(OTHER);
-        vm.expectEmit(true, true, false, true, address(hw));
-        emit AgentListed("whale-watch", OTHER, 1_000e18);
-        hw.listAgent("whale-watch", OTHER, 1_000e18);
-
-        (address payee, uint256 price) = hw.agentInfo("whale-watch");
-        assertEq(payee, OTHER, "payee should be recorded");
-        assertEq(price, 1_000e18, "price should be recorded");
-
+    function testBurnRoundsDown() public {
         vm.prank(USER);
-        hw.hire("whale-watch", 1_000e18);
+        hw.hire("monitor", 19);
 
-        assertEq(wif.balanceOf(OTHER), 900e18, "supplier should get 90%");
-        assertEq(wif.balanceOf(hw.BURN()), 100e18, "burn should be 10%");
+        assertEq(wif.balanceOf(hw.BURN()), 1, "burn is the floor of one tenth");
+        assertEq(wif.balanceOf(OP), 18, "operator gets the remainder");
     }
 
-    function testRejectsWrongAmountForListedAgent() public {
+    function testAnyAgentIdIsAccepted() public {
         vm.prank(USER);
-        try hw.hire("research", 9_000e18) {
-            fail("paying the wrong price should revert");
-        } catch {}
+        hw.hire("not-a-registered-id", 1_000e18);
+
+        assertEq(wif.balanceOf(OP), 900e18, "operator is paid for every id");
+        assertEq(wif.balanceOf(hw.BURN()), 100e18, "burn is still 10%");
     }
 
-    function testOperatorCanReprice() public {
-        vm.prank(OP);
-        hw.listAgent("research", OP, 12_000e18);
+    function testNoRegistrySurface() public view {
+        (bool ok,) = address(hw).staticcall(abi.encodeWithSignature("agentInfo(string)", "monitor"));
+        require(!ok, "deployed contract has no agentInfo");
+    }
 
+    function testRevertsWithoutAllowance() public {
         vm.prank(USER);
-        hw.hire("research", 12_000e18);
+        wif.approve(address(hw), 0);
 
-        assertEq(wif.balanceOf(OP), 10_800e18, "operator gets 90% of the new price");
-        assertEq(wif.balanceOf(hw.BURN()), 1_200e18, "burn is 10%");
-    }
-
-    function testUnlistedAgentFallsBackToOperator() public {
+        vm.expectRevert();
         vm.prank(USER);
-        hw.hire("nobody-home", 1_000e18);
-        assertEq(wif.balanceOf(OP), 900e18, "operator is the fallback payee");
-    }
+        hw.hire("monitor", 1_000e18);
 
-    function testBuiltInIdsCannotBeSquatted() public {
-        vm.prank(OTHER);
-        try hw.listAgent("research", OTHER, 1_000e18) {
-            fail("squatting a built-in id should revert");
-        } catch {}
-    }
-
-    function testPayeeMustBeSender() public {
-        vm.prank(OTHER);
-        try hw.listAgent("sneaky", USER, 1_000e18) {
-            fail("listing someone else as payee should revert");
-        } catch {}
-    }
-
-    function testRejectsZeroAmount() public {
-        vm.prank(USER);
-        try hw.hire("nobody-home", 0) {
-            fail("zero amount should revert");
-        } catch {}
-    }
-
-    function testRejectsEmptyAgentId() public {
-        vm.prank(OTHER);
-        try hw.listAgent("", OTHER, 1_000e18) {
-            fail("empty agent id should revert");
-        } catch {}
-    }
-
-    function testRejectsZeroPrice() public {
-        vm.prank(OTHER);
-        try hw.listAgent("free-work", OTHER, 0) {
-            fail("zero price should revert");
-        } catch {}
-    }
-
-    function testRejectsZeroOperator() public {
-        try new HireWif(address(0)) {
-            fail("zero operator should revert");
-        } catch {}
+        assertEq(wif.balanceOf(hw.BURN()), 0, "no burn on a failed hire");
+        assertEq(wif.balanceOf(OP), 0, "no operator payout on a failed hire");
+        assertEq(wif.balanceOf(USER), 1_000_000e18, "user keeps the balance");
     }
 }

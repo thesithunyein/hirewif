@@ -3,6 +3,7 @@ src = "contracts"
 test = "test"
 out = "contracts/out"
 libs = ["lib"]
-solc_version = "0.8.24"
-optimizer = true
-optimizer_runs = 200
+# Matches the deployed contract: solc 0.8.34, optimizer off.
+# `forge build` then reproduces the onchain runtime bytecode except the metadata hash.
+solc_version = "0.8.34"
+optimizer = false

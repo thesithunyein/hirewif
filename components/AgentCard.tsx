@@ -158,7 +158,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
       <div className="flex items-center justify-between text-xs text-muted">
         <span>{agent.price.toLocaleString('en-US')} WIF total</span>
         <span>
-          {toOperator.toLocaleString('en-US')} to agent · {burn.toLocaleString('en-US')} burned
+          {toOperator.toLocaleString('en-US')} to operator · {burn.toLocaleString('en-US')} burned
         </span>
       </div>
       {agent.paid && agent.paid > 0 ? (

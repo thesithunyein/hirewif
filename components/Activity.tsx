@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 type Hire = {
   user: string;
   agent: string;
-  payee: string;
   paid: number;
   burned: number;
   tx: string;
@@ -16,14 +15,13 @@ type Stats = {
   count: number;
   paid: number;
   burned: number;
-  earning: { payee: string; paid: number; hires: number }[];
+  agents: { agent: string; paid: number; hires: number }[];
   recent: Hire[];
   updatedAt: string;
 };
 
 const num = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 const addr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-const short = (a: string) => (a === '0x7a35f63f81357dade2cff8f5699b935786aa9da2' ? 'operator' : addr(a));
 
 export function Activity() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -62,7 +60,7 @@ export function Activity() {
         {card('Hires', stats ? num(stats.count) : '—')}
         {card('WIF paid', stats ? num(stats.paid) : '—')}
         {card('WIF burned', stats ? num(stats.burned) : '—')}
-        {card('Agents earning', stats ? num(stats.earning.length) : '—')}
+        {card('Agents hired', stats ? num(stats.agents.length) : '—')}
       </div>
 
       <div className="mt-3 text-xs text-muted">
@@ -81,9 +79,7 @@ export function Activity() {
               <div key={h.tx} className="px-4 py-2.5 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span className="font-medium">{h.agent}</span>
                 <span>{num(h.paid)} WIF</span>
-                <span className="text-muted">
-                  {addr(h.user)} → {short(h.payee)}
-                </span>
+                <span className="text-muted">{addr(h.user)}</span>
                 <a
                   href={`https://robinhoodchain.blockscout.com/tx/${h.tx}`}
                   target="_blank"

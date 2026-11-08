@@ -144,10 +144,10 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
       lines.push(`  ${pad('hires', 15)}${num(hires.count)}`);
       lines.push(`  ${pad('paid', 15)}${num(hires.paid)} WIF`);
       lines.push(`  ${pad('burned', 15)}${num(hires.burned)} WIF`);
-      if (hires.earning.length) {
-        lines.push('  agents earning:');
-        for (const e of hires.earning.slice(0, 4)) {
-          lines.push(`    ${addr(e.payee)}  ${num(e.paid)} WIF  ${e.hires} hire${e.hires === 1 ? '' : 's'}`);
+      if (hires.agents.length) {
+        lines.push('  agents hired:');
+        for (const e of hires.agents.slice(0, 4)) {
+          lines.push(`    ${pad(e.agent, 12)}${num(e.paid)} WIF  ${e.hires} hire${e.hires === 1 ? '' : 's'}`);
         }
       }
       lines.push('  recent:');
@@ -173,5 +173,5 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
 
 function hireLine(h: Hire, timestamp?: number): string {
   const when = timestamp ? `  ${ago(timestamp)}` : '';
-  return `${pad(h.agent, 10)}${num(h.paid)} WIF  ${addr(h.user)} → ${addr(h.payee)}  tx ${addr(h.tx)}${when}`;
+  return `${pad(h.agent, 12)}${num(h.paid)} WIF  ${addr(h.user)}  tx ${addr(h.tx)}${when}`;
 }

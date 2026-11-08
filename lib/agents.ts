@@ -28,7 +28,7 @@ export const agents: Agent[] = [
     price: 3_000,
     address: OPERATOR,
     description:
-      'Every hire on this marketplace, read from the Hired events. Total WIF paid, WIF burned, and which agents are earning.',
+      'Every hire on this marketplace, read from the Hired events. Total WIF paid, WIF burned, and which agents were hired.',
     tags: ['hires', 'earnings', 'burn'],
   },
   {

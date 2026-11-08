@@ -1,6 +1,6 @@
-import { createPublicClient, http, formatUnits, decodeEventLog, parseAbiItem, type Address } from 'viem';
+import { createPublicClient, http, formatUnits, parseAbiItem, type Address } from 'viem';
 import { robinhood, WIF_ADDRESS } from './chain';
-import { HIRE_CONTRACT, OPERATOR } from './config';
+import { HIRE_CONTRACT } from './config';
 
 export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as Address;
 const RPC_URL = process.env.ROBINHOOD_RPC ?? 'https://rpc.mainnet.chain.robinhood.com';
@@ -27,13 +27,7 @@ const WIF_READ_ABI = [
 ] as const;
 
 const TRANSFER = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
-const HIRED = parseAbiItem(
-  'event Hired(address indexed user, string agent, address indexed payee, uint256 paid, uint256 burned)'
-);
-const HIRED_LEGACY = parseAbiItem(
-  'event Hired(address indexed user, string agent, uint256 paid, uint256 burned)'
-);
-const AGENT_LISTED = parseAbiItem('event AgentListed(string agent, address indexed payee, uint256 price)');
+const HIRED = parseAbiItem('event Hired(address indexed user, string agent, uint256 paid, uint256 burned)');
 
 type Hit = { at: number; value: unknown };
 const cache = new Map<string, Hit>();
@@ -173,7 +167,6 @@ export async function getFlow(): Promise<Flow | null> {
 export type Hire = {
   user: string;
   agent: string;
-  payee: string;
   paid: number;
   burned: number;
   tx: string;
@@ -185,7 +178,7 @@ export type Hires = {
   paid: number;
   burned: number;
   recent: Hire[];
-  earning: { payee: string; paid: number; hires: number }[];
+  agents: { agent: string; paid: number; hires: number }[];
 };
 
 export async function getHires(): Promise<Hires> {
@@ -193,84 +186,37 @@ export async function getHires(): Promise<Hires> {
     try {
       const logs = await client.getLogs({
         address: HIRE_CONTRACT,
-        fromBlock: DEPLOY_BLOCK,
-        toBlock: 'latest',
-      });
-      const hires: Hire[] = [];
-      for (const log of logs) {
-        try {
-          const d = decodeEventLog({ abi: [HIRED], data: log.data, topics: log.topics });
-          hires.push({
-            user: String(d.args.user),
-            agent: String(d.args.agent),
-            payee: String(d.args.payee),
-            paid: Number(formatUnits(d.args.paid, 18)),
-            burned: Number(formatUnits(d.args.burned, 18)),
-            tx: String(log.transactionHash),
-            block: Number(log.blockNumber),
-          });
-        } catch {
-          try {
-            const d = decodeEventLog({ abi: [HIRED_LEGACY], data: log.data, topics: log.topics });
-            hires.push({
-              user: String(d.args.user),
-              agent: String(d.args.agent),
-              payee: OPERATOR,
-              paid: Number(formatUnits(d.args.paid, 18)),
-              burned: Number(formatUnits(d.args.burned, 18)),
-              tx: String(log.transactionHash),
-              block: Number(log.blockNumber),
-            });
-          } catch {
-            continue;
-          }
-        }
-      }
-      const byPayee = new Map<string, { paid: number; hires: number }>();
-      for (const h of hires) {
-        const cur = byPayee.get(h.payee) ?? { paid: 0, hires: 0 };
-        byPayee.set(h.payee, { paid: cur.paid + h.paid, hires: cur.hires + 1 });
-      }
-      return {
-        count: hires.length,
-        paid: hires.reduce((a, h) => a + h.paid, 0),
-        burned: hires.reduce((a, h) => a + h.burned, 0),
-        recent: hires.sort((a, b) => b.block - a.block).slice(0, 5),
-        earning: [...byPayee.entries()]
-          .map(([payee, v]) => ({ payee, ...v }))
-          .sort((a, b) => b.paid - a.paid),
-      };
-    } catch (e) {
-      throw new Error(`hire log read failed: ${(e as Error).message}`);
-    }
-  });
-}
-
-export type Listing = { id: string; payee: string; price: number };
-
-export async function getRegistry(): Promise<Listing[]> {
-  return cached('registry', 60_000, async () => {
-    try {
-      const logs = await client.getLogs({
-        address: HIRE_CONTRACT,
-        event: AGENT_LISTED,
+        event: HIRED,
         fromBlock: DEPLOY_BLOCK,
         toBlock: 'latest',
         strict: true,
       });
-      const latest = new Map<string, Listing>();
-      for (const log of logs) {
-        const id = String(log.args?.agent ?? '');
-        if (!id) continue;
-        latest.set(id, {
-          id,
-          payee: String(log.args?.payee),
-          price: Number(formatUnits(log.args?.price ?? 0n, 18)),
-        });
+      const hires: Hire[] = logs.map((log) => ({
+        user: String(log.args.user),
+        agent: String(log.args.agent),
+        paid: Number(formatUnits(log.args.paid, 18)),
+        burned: Number(formatUnits(log.args.burned, 18)),
+        tx: String(log.transactionHash),
+        block: Number(log.blockNumber),
+      }));
+
+      const byAgent = new Map<string, { paid: number; hires: number }>();
+      for (const h of hires) {
+        const cur = byAgent.get(h.agent) ?? { paid: 0, hires: 0 };
+        byAgent.set(h.agent, { paid: cur.paid + h.paid, hires: cur.hires + 1 });
       }
-      return [...latest.values()];
+
+      return {
+        count: hires.length,
+        paid: hires.reduce((a, h) => a + h.paid, 0),
+        burned: hires.reduce((a, h) => a + h.burned, 0),
+        recent: [...hires].sort((a, b) => b.block - a.block).slice(0, 5),
+        agents: [...byAgent.entries()]
+          .map(([agent, v]) => ({ agent, ...v }))
+          .sort((a, b) => b.paid - a.paid),
+      };
     } catch (e) {
-      throw new Error(`registry read failed: ${(e as Error).message}`);
+      throw new Error(`hire log read failed: ${(e as Error).message}`);
     }
   });
 }

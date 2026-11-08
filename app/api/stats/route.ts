@@ -10,7 +10,7 @@ export async function GET() {
       count: hires.count,
       paid: hires.paid,
       burned: hires.burned,
-      earning: hires.earning.slice(0, 5),
+      agents: hires.agents.slice(0, 5),
       recent: hires.recent,
       updatedAt: new Date().toISOString(),
     });
