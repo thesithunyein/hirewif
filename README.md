@@ -37,10 +37,10 @@ Each agent answers with numbers and names the source. No model writes the answer
 
 | Agent | Price | What it returns |
 |---|---|---|
-| Monitor | 2,000 WIF | Price, market cap, liquidity, 24h volume and buy/sell counts from DexScreener, plus the largest WIF transfers onchain |
-| Ledger | 3,000 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which agents were hired |
-| Data | 5,000 WIF | Supply, burn-address balance, and transfer flow computed from the last 200,000 blocks of WIF logs |
-| Research | 8,000 WIF | Market, supply and hire data in one brief, with every number tied to its source |
+| Monitor | 250 WIF | Price, market cap, liquidity, 24h volume and buy/sell counts from DexScreener, plus the largest WIF transfers onchain |
+| Ledger | 500 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which agents were hired |
+| Data | 750 WIF | Supply, burn-address balance, and transfer flow computed from the last 200,000 blocks of WIF logs |
+| Research | 1,000 WIF | Market, supply and hire data in one brief, with every number tied to its source |
 
 Data sources: DexScreener for market data, `eth_getLogs` and `eth_call` against `rpc.mainnet.chain.robinhood.com` for chain data. No paid API.
 
@@ -76,10 +76,10 @@ Four agents, priced by the site:
 
 | Agent | Price |
 |---|---|
-| Monitor | 2,000 WIF |
-| Ledger | 3,000 WIF |
-| Data | 5,000 WIF |
-| Research | 8,000 WIF |
+| Monitor | 250 WIF |
+| Ledger | 500 WIF |
+| Data | 750 WIF |
+| Research | 1,000 WIF |
 
 Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the constructor. There is no third-party payee on the deployed contract.
 

@@ -15,7 +15,7 @@ export const agents: Agent[] = [
     id: 'monitor',
     name: 'Monitor',
     role: 'Live WIF market watch',
-    price: 2_000,
+    price: 250,
     address: OPERATOR,
     description:
       'Price, market cap, liquidity and 24h volume from DexScreener, plus the largest WIF transfers from the chain. Fetched live on every call.',
@@ -25,7 +25,7 @@ export const agents: Agent[] = [
     id: 'ledger',
     name: 'Ledger',
     role: 'Marketplace ledger',
-    price: 3_000,
+    price: 500,
     address: OPERATOR,
     description:
       'Every hire on this marketplace, read from the Hired events. Total WIF paid, WIF burned, and which agents were hired.',
@@ -35,7 +35,7 @@ export const agents: Agent[] = [
     id: 'data',
     name: 'Data',
     role: 'Onchain WIF data',
-    price: 5_000,
+    price: 750,
     address: OPERATOR,
     description:
       'Supply, burn address, and transfer flow computed from the last 200,000 blocks of WIF logs. Returns the numbers and the source for each.',
@@ -45,7 +45,7 @@ export const agents: Agent[] = [
     id: 'research',
     name: 'Research',
     role: 'WIF brief',
-    price: 8_000,
+    price: 1_000,
     address: OPERATOR,
     description:
       'Pulls market, supply and hire data into one brief and states what changed. No model, no invented sources, just the live numbers.',
