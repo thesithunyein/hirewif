@@ -20,7 +20,7 @@ body {
   position: relative;
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  background: #111111;
+  background: transparent;
 }
 
 .hero-video__media {
@@ -28,6 +28,7 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center;
+  mix-blend-mode: screen;
 }
 
 ::selection {
