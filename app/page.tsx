@@ -50,29 +50,6 @@ export default function Home() {
                 aria-label="HireWif product demonstration"
                 className="hero-video__media"
               />
-              <div className="hero-video__scrim" aria-hidden="true" />
-              <div className="hero-video__caption">
-                <div className="flex items-center justify-between text-xs uppercase tracking-wider">
-                  <span>Live proof</span>
-                  <span className="inline-flex items-center gap-2 normal-case tracking-normal">
-                    <span className="h-2 w-2 rounded-full bg-green-400" aria-hidden="true" />
-                    Mainnet
-                  </span>
-                </div>
-                <div className="mt-6 flex items-baseline gap-2">
-                  <span className="font-mono tabular-nums text-4xl font-medium">250</span>
-                  <span className="text-sm">WIF paid</span>
-                </div>
-                <div className="mt-3 text-sm text-white/80">25 WIF burned · 225 WIF to operator</div>
-                <a
-                  href="https://robinhoodchain.blockscout.com/tx/0x0aed9c531acc7da395e8e8146d4e3635ba0cd9bd88e16ad947f288661bd4d73a"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-5 inline-flex min-h-10 items-center text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                >
-                  Inspect the transaction
-                </a>
-              </div>
             </div>
           </div>
         </section>
