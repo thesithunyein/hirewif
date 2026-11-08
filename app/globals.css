@@ -20,7 +20,8 @@ body {
   position: relative;
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  background: transparent;
+  background: #111111;
+  border-radius: 1.5rem;
 }
 
 .hero-video__media {

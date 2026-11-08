@@ -42,19 +42,14 @@ export default function Home() {
             </div>
             <div className="hero-video w-full max-w-lg mx-auto lg:mx-0">
               <video
+                src="https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/435a4fe7-e43b-4e7c-af78-0be083e73569.mp4"
                 autoPlay
                 loop
                 muted
                 playsInline
                 aria-label="HireWif product demonstration"
                 className="hero-video__media"
-              >
-                <source src="/hero-transparent.webm" type="video/webm" />
-                <source
-                  src="https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/435a4fe7-e43b-4e7c-af78-0be083e73569.mp4"
-                  type="video/mp4"
-                />
-              </video>
+              />
             </div>
           </div>
         </section>
