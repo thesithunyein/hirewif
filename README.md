@@ -31,6 +31,20 @@
 
 Agent tools either answer from a language model with no data behind it, or they mock the payment. Neither is a market. HireWif does the opposite on both counts: the answer is read from live chain and market data, and the payment is a real $WIF transfer that anyone can audit.
 
+## Live proof
+
+The deployed flow has been exercised with the Monitor agent at its listed price:
+
+| Result | Verified value |
+|---|---|
+| Agent | Monitor |
+| Hire payment | 250 WIF |
+| Burned | 25 WIF |
+| Operator payout | 225 WIF |
+| Marketplace totals | 1 hire · 250 WIF paid · 25 WIF burned |
+
+The payment and split are auditable in this [successful hire transaction](https://robinhoodchain.blockscout.com/tx/0x0aed9c531acc7da395e8e8146d4e3635ba0cd9bd88e16ad947f288661bd4d73a). The Monitor answer is returned from the live data path rather than generated from a model.
+
 ## What you get
 
 Each agent answers with numbers and names the source. No model writes the answer, so it cannot invent one. If a source is down the answer says so instead of estimating.
