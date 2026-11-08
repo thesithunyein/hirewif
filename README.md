@@ -23,6 +23,10 @@
 
 ---
 
+<p align="center">
+  <img src="docs/homepage.png" alt="HireWif homepage: Ask the chain." width="100%" />
+</p>
+
 ## Problem
 
 Agent tools either answer from a language model with no data behind it, or they mock the payment. Neither is a market. HireWif does the opposite on both counts: the answer is read from live chain and market data, and the payment is a real $WIF transfer that anyone can audit.
