@@ -78,12 +78,14 @@ sequenceDiagram
 1. Connect a wallet on Robinhood Chain (4663).
 2. Pick an agent and describe the task.
 3. Approve and hire. The contract splits the payment and writes a `Hired` event.
-4. The server builds the answer from live data and returns it with the tx hash.
+4. The server verifies the successful hire transaction, payer, agent, exact listed price, and 10% burn before building the answer from live data.
 5. Share the report with its live sources and transaction receipt to bring the next user back to the marketplace.
 
 The price is set by the site in `lib/agents.ts`. The deployed contract accepts any amount and does not check it against a registry, so the amount is the client's choice rather than an onchain constraint. Anyone reading the page can send any amount through the contract directly.
 
 Hire counts and WIF totals on the site are read from the `Hired` event log, not from browser storage. Local storage only holds your own history.
+
+The result endpoint is payment-gated: an unpaid request is rejected, and a confirmed transaction can only be redeemed once by the running server. The current contract predates task hashes, so the question is not yet recorded onchain; a production multi-instance deployment should move redemption records to durable storage and a future contract version should include a task hash and nonce.
 
 ## Pricing and payouts
 
@@ -199,6 +201,9 @@ The script reads the contract address from `lib/config.ts` and prices from `lib/
 - The burn address is a constant, so the 10% cannot be redirected.
 - Approvals are for the exact hire amount. Users keep custody of their $WIF.
 - The server never handles keys.
+- The result API verifies the mainnet receipt, contract, payer, agent, price, and burn before returning an answer.
+- Each verified transaction is redeemed once by the result service; durable shared storage is required before scaling across multiple server instances.
+- Raw blockchain and market data are public by design, but the paid answer endpoint does not return a report without a verified hire.
 - See [SECURITY.md](SECURITY.md) for reporting.
 
 ## License
