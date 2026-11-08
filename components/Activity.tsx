@@ -56,7 +56,7 @@ export function Activity() {
 
   return (
     <div className="mb-10">
-      <div className="flex gap-6 text-sm">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
         {card('Hires', stats ? num(stats.count) : '—')}
         {card('WIF paid', stats ? num(stats.paid) : '—')}
         {card('WIF burned', stats ? num(stats.burned) : '—')}
@@ -92,6 +92,21 @@ export function Activity() {
             ))}
           </div>
         </div>
+      )}
+      {!failed && stats && stats.recent.length === 0 && (
+        <div className="mt-6 border border-line p-5 text-sm">
+          <div className="font-medium">No hires yet</div>
+          <p className="mt-1 text-muted">Be the first to create a public receipt for the marketplace.</p>
+        </div>
+      )}
+      {failed && (
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-3 min-h-10 text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+        >
+          Retry chain read
+        </button>
       )}
     </div>
   );

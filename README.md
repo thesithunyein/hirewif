@@ -79,6 +79,7 @@ sequenceDiagram
 2. Pick an agent and describe the task.
 3. Approve and hire. The contract splits the payment and writes a `Hired` event.
 4. The server builds the answer from live data and returns it with the tx hash.
+5. Share the report with its live sources and transaction receipt to bring the next user back to the marketplace.
 
 The price is set by the site in `lib/agents.ts`. The deployed contract accepts any amount and does not check it against a registry, so the amount is the client's choice rather than an onchain constraint. Anyone reading the page can send any amount through the contract directly.
 

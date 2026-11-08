@@ -34,11 +34,12 @@ interface Agent {
 
 export function AgentCard({ agent }: { agent: Agent }) {
   const { isConnected, address } = useAccount();
-  const { writeContract, data: hash, isPending, reset } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
   const [task, setTask] = useState('');
   const [result, setResult] = useState('');
   const [loadingResult, setLoadingResult] = useState(false);
+  const [shared, setShared] = useState(false);
   const [step, setStep] = useState<'idle' | 'approving' | 'hiring' | 'done'>('idle');
 
   const amount = parseUnits(agent.price.toString(), 18);
@@ -124,9 +125,24 @@ export function AgentCard({ agent }: { agent: Agent }) {
   }, [isSuccess, step]);
 
   const busy = isPending || isConfirming;
+  const shareResult = async () => {
+    try {
+      const tx = hash ? `https://robinhoodchain.blockscout.com/tx/${hash}` : '';
+      const text = `${agent.name} report\n\n${result}\n\n${tx}`.trim();
+      if (navigator.share) {
+        await navigator.share({ title: `${agent.name} report · HireWif`, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      setShared(true);
+      window.setTimeout(() => setShared(false), 1500);
+    } catch {
+      // Share cancellation is a user choice, not a transaction failure.
+    }
+  };
 
   return (
-    <div className="border border-line bg-white p-6 flex flex-col gap-5 hover:border-muted transition-colors">
+    <div className="border border-line bg-paper p-6 flex flex-col gap-5 hover:border-muted transition-colors">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider">{agent.role}</div>
@@ -151,7 +167,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
         onChange={(e) => setTask(e.target.value)}
         placeholder="Describe the task..."
         rows={3}
-        className="w-full border border-line px-3 py-2 text-sm resize-none focus:outline-none focus:border-ink"
+        className="w-full border border-line px-3 py-2 text-sm resize-none focus:outline-none focus:border-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         disabled={step === 'done'}
       />
 
@@ -170,10 +186,12 @@ export function AgentCard({ agent }: { agent: Agent }) {
       <button
         onClick={handleHire}
         disabled={!isConnected || !task.trim() || busy || step === 'done'}
-        className="w-full py-2.5 text-sm bg-ink text-paper disabled:opacity-40 hover:opacity-90"
+        aria-busy={busy}
+        className="w-full min-h-10 py-2.5 text-sm bg-ink text-paper transition-opacity duration-100 ease-out active:translate-y-px disabled:opacity-40 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
       >
         {busy ? (step === 'approving' ? 'Approving…' : 'Hiring…') : step === 'done' ? 'Hired' : needsApproval ? 'Approve & Hire' : 'Hire'}
       </button>
+      {writeError && <div role="alert" className="text-xs text-red-700">Transaction failed. Check your wallet and try again.</div>}
 
       {step === 'done' && (
         <div className="text-xs space-y-2 pt-2 border-t border-line">
@@ -192,9 +210,16 @@ export function AgentCard({ agent }: { agent: Agent }) {
           </div>
           {loadingResult && <div className="text-muted">Generating result…</div>}
           {result && (
-            <pre className="text-xs whitespace-pre-wrap text-ink bg-soft p-3 rounded">
-              {result}
-            </pre>
+            <>
+              <pre className="text-xs whitespace-pre-wrap text-ink bg-soft p-3 rounded">{result}</pre>
+              <button
+                type="button"
+                onClick={shareResult}
+                className="min-h-10 text-left text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+              >
+                {shared ? 'Copied report' : 'Share this report'}
+              </button>
+            </>
           )}
         </div>
       )}
