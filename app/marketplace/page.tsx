@@ -6,6 +6,7 @@ import { AgentDirectory } from '@/components/AgentDirectory';
 import { Logo } from '@/components/Logo';
 import { History } from '@/components/History';
 import { Activity } from '@/components/Activity';
+import { Pulse } from '@/components/Pulse';
 
 export default function Marketplace() {
   return (
@@ -35,6 +36,7 @@ export default function Marketplace() {
         </div>
 
         <Activity />
+        <Pulse />
 
         <AgentDirectory />
 
