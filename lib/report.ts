@@ -9,6 +9,13 @@ const DEFAULTS: Record<string, Section[]> = {
   research: ['market', 'onchain', 'hires'],
 };
 
+const ENTITLEMENTS: Record<string, Section[]> = {
+  monitor: ['market', 'flow'],
+  data: ['onchain', 'flow'],
+  ledger: ['hires'],
+  research: ['market', 'onchain', 'hires'],
+};
+
 const MATCHERS: [Section, RegExp][] = [
   ['market', /price|volume|liquidity|market|worth|chart|pump|dump|cap\b/i],
   ['onchain', /supply|burn|burned|total|contract|balance|decimals/i],
@@ -17,14 +24,17 @@ const MATCHERS: [Section, RegExp][] = [
 ];
 
 function plan(agent: string, task: string): Section[] {
+  const allowed = new Set(ENTITLEMENTS[agent] ?? ['market']);
   const wanted = new Set<Section>();
   for (const [section, re] of MATCHERS) {
-    if (re.test(task)) wanted.add(section);
+    if (allowed.has(section) && re.test(task)) wanted.add(section);
   }
   const out: Section[] = [];
   for (const s of wanted) out.push(s);
-  for (const s of DEFAULTS[agent] ?? []) if (!out.includes(s)) out.push(s);
-  return out.length ? out : DEFAULTS[agent] ?? ['market'];
+  for (const s of DEFAULTS[agent] ?? ['market']) {
+    if (allowed.has(s) && !out.includes(s)) out.push(s);
+  }
+  return out.length ? out : [...allowed];
 }
 
 const usd = (n: number) => {

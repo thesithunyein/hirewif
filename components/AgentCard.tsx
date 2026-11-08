@@ -99,7 +99,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
       fetch('/api/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: agent.id, task }),
+        body: JSON.stringify({ agent: agent.id, task, tx: hash, user: address }),
       })
         .then(async (r) => {
           const data = await r.json().catch(() => ({}));
