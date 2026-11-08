@@ -27,19 +27,26 @@ export function History() {
       <div className="space-y-3">
         {items.slice(0, 5).map((item, i) => (
           <div key={i} className="border border-line p-4 text-sm">
-            <div className="flex justify-between text-xs text-muted mb-1">
+            <div className="flex justify-between text-xs text-muted mb-2">
               <span>{item.agent}</span>
               <span>{item.burn} WIF burned</span>
             </div>
-            <div className="text-ink">{item.task}</div>
+            <div className="text-xs text-muted">Question: {item.task}</div>
+            {item.result ? (
+              <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap border border-line bg-soft p-3 text-sm leading-relaxed text-ink">
+                {item.result}
+              </pre>
+            ) : (
+              <div className="mt-3 text-sm text-muted">Answer unavailable for this saved hire.</div>
+            )}
             {item.hash && (
               <a
                 href={`https://robinhoodchain.blockscout.com/tx/${item.hash}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-muted underline"
+                className="mt-3 inline-flex min-h-10 items-center text-xs text-muted underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               >
-                View payment
+                Verify payment onchain
               </a>
             )}
           </div>
