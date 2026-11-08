@@ -72,11 +72,14 @@ export function Activity() {
       </div>
 
       {stats && stats.recent.length > 0 && (
-        <div className="mt-6 border border-line">
-          <div className="px-4 py-2 border-b border-line text-xs text-muted">Latest payments</div>
-          <div className="divide-y divide-line">
+        <details className="mt-5 border-t border-line pt-3 group">
+          <summary className="inline-flex min-h-10 cursor-pointer items-center text-xs text-muted underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2">
+            <span className="group-open:hidden">View recent payments</span>
+            <span className="hidden group-open:inline">Hide recent payments</span>
+          </summary>
+          <div className="mt-3 divide-y divide-line border border-line">
             {stats.recent.map((h) => (
-              <div key={h.tx} className="px-4 py-2.5 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
+              <div key={h.tx} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-xs">
                 <span className="font-medium">{h.agent}</span>
                 <span>{num(h.paid)} WIF</span>
                 <span className="text-muted">{addr(h.user)}</span>
@@ -84,14 +87,14 @@ export function Activity() {
                   href={`https://robinhoodchain.blockscout.com/tx/${h.tx}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-muted underline ml-auto"
+                  className="ml-auto text-muted underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                 >
-                  {addr(h.tx)}
+                  Verify
                 </a>
               </div>
             ))}
           </div>
-        </div>
+        </details>
       )}
       {!failed && stats && stats.recent.length === 0 && (
         <div className="mt-6 border border-line p-5 text-sm">

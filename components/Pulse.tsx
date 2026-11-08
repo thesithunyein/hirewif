@@ -32,7 +32,7 @@ export function Pulse() {
   }, []);
 
   return (
-    <section className="mb-12 border border-line bg-paper p-5 sm:p-6">
+    <section className="mb-14 border-y border-line py-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="text-xs uppercase tracking-wider text-muted">WIF Pulse</div>
@@ -55,22 +55,22 @@ export function Pulse() {
         <p className="mt-5 text-sm text-muted">Reading live WIF activity…</p>
       ) : (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="border border-line p-3">
+          <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+            <div>
               <div className="text-xs text-muted">Price</div>
-              <div className="mt-1 font-mono text-sm">{data.market ? usd(data.market.priceUsd) : '—'}</div>
+              <div className="mt-1 font-mono text-sm tabular-nums">{data.market ? usd(data.market.priceUsd) : '—'}</div>
             </div>
-            <div className="border border-line p-3">
+            <div>
               <div className="text-xs text-muted">24h move</div>
-              <div className="mt-1 font-mono text-sm">{data.market ? `${data.market.change24h >= 0 ? '+' : ''}${data.market.change24h.toFixed(2)}%` : '—'}</div>
+              <div className="mt-1 font-mono text-sm tabular-nums">{data.market ? `${data.market.change24h >= 0 ? '+' : ''}${data.market.change24h.toFixed(2)}%` : '—'}</div>
             </div>
-            <div className="border border-line p-3">
+            <div>
               <div className="text-xs text-muted">Recent transfers</div>
-              <div className="mt-1 font-mono text-sm">{data.flow?.transfers.toLocaleString('en-US') ?? '—'}</div>
+              <div className="mt-1 font-mono text-sm tabular-nums">{data.flow?.transfers.toLocaleString('en-US') ?? '—'}</div>
             </div>
-            <div className="border border-line p-3">
+            <div>
               <div className="text-xs text-muted">Repeat wallets</div>
-              <div className="mt-1 font-mono text-sm">{data.hires?.repeatUsers ?? 0}</div>
+              <div className="mt-1 font-mono text-sm tabular-nums">{data.hires?.repeatUsers ?? 0}</div>
             </div>
           </div>
           {data.signals.length > 0 && (

@@ -27,18 +27,30 @@ export default function Marketplace() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-16">
-        <div className="mb-12">
-          <h1 className="text-3xl font-medium tracking-tight">Choose an agent</h1>
-          <p className="mt-3 text-muted max-w-md">
-            Choose a task, ask a question, and pay the listed price in WIF. Each answer uses live data. 10% of every payment is burned.
+      <main className="max-w-5xl mx-auto px-6 pt-20 pb-24">
+        <div className="mb-14 max-w-xl">
+          <div className="text-xs uppercase tracking-wider text-muted">Live WIF marketplace</div>
+          <h1 className="mt-3 text-4xl sm:text-5xl font-medium tracking-tight leading-tight">Choose an agent.</h1>
+          <p className="mt-5 text-muted leading-relaxed">
+            Ask a focused question, pay the listed price in WIF, and get a sourced answer from live market and Robinhood Chain data. 10% of every payment is burned.
           </p>
         </div>
 
-        <Activity />
         <Pulse />
+        <Activity />
 
-        <AgentDirectory />
+        <section className="border-t border-line pt-12">
+          <div className="mb-8 flex items-end justify-between gap-6">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted">Paid agents</div>
+              <h2 className="mt-2 text-2xl font-medium tracking-tight">Ask the chain.</h2>
+            </div>
+            <p className="hidden max-w-xs text-right text-xs leading-relaxed text-muted sm:block">
+              Every result is verified against the hire transaction before it is returned.
+            </p>
+          </div>
+          <AgentDirectory />
+        </section>
 
         <div className="mt-16">
           <History />
