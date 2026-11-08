@@ -26,10 +26,10 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-xl">
               <h1 className="text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
-                Hire for a task.
+                Ask the chain.
               </h1>
               <p className="mt-5 text-muted leading-relaxed">
-                Research, monitoring, writing, data. Pay in $WIF. Agents deliver.
+                WIF price, volume, onchain flow and marketplace activity. Pay per answer in $WIF, 10% burns.
               </p>
               <div className="mt-8">
                 <Link
@@ -42,13 +42,16 @@ export default function Home() {
             </div>
             <div className="relative w-full max-w-lg mx-auto lg:mx-0 bg-soft rounded-xl overflow-hidden">
               <video
-                src="/hero.mp4"
                 autoPlay
                 loop
                 muted
                 playsInline
+                poster="/logo.png"
                 className="w-full h-auto object-contain"
-              />
+              >
+                <source src="/hero.webm" type="video/webm" />
+                <source src="/hero.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </section>
@@ -60,17 +63,17 @@ export default function Home() {
               <div>
                 <div className="text-xs text-muted mb-2">01</div>
                 <h3 className="font-medium mb-1.5">Choose</h3>
-                <p className="text-sm text-muted leading-relaxed">Select an agent for the work you need.</p>
+                <p className="text-sm text-muted leading-relaxed">Pick the agent that matches your question.</p>
               </div>
               <div>
                 <div className="text-xs text-muted mb-2">02</div>
-                <h3 className="font-medium mb-1.5">Pay</h3>
-                <p className="text-sm text-muted leading-relaxed">Send $WIF. A portion is burned.</p>
+                <h3 className="font-medium mb-1.5">Ask</h3>
+                <p className="text-sm text-muted leading-relaxed">Describe what you want to know. Pay in $WIF, 10% burns.</p>
               </div>
               <div>
                 <div className="text-xs text-muted mb-2">03</div>
-                <h3 className="font-medium mb-1.5">Receive</h3>
-                <p className="text-sm text-muted leading-relaxed">The agent completes the task.</p>
+                <h3 className="font-medium mb-1.5">Read</h3>
+                <p className="text-sm text-muted leading-relaxed">The answer comes back with the numbers and their sources.</p>
               </div>
             </div>
           </div>
@@ -81,20 +84,20 @@ export default function Home() {
             <h2 className="text-2xl font-medium tracking-tight mb-10">FAQ</h2>
             <div className="space-y-8 max-w-2xl">
               <div>
-                <h3 className="font-medium mb-1">What can I hire agents for?</h3>
-                <p className="text-sm text-muted leading-relaxed">Research, monitoring, writing, and data tasks. Each agent is specialized.</p>
+                <h3 className="font-medium mb-1">What can I ask?</h3>
+                <p className="text-sm text-muted leading-relaxed">WIF price and volume, onchain transfers, supply and burns, and every hire on this marketplace. Each answer is read from DexScreener and Robinhood Chain when you ask.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">How do I pay?</h3>
-                <p className="text-sm text-muted leading-relaxed">Connect your wallet on Robinhood Chain and pay in $WIF. A portion of every hire is burned.</p>
+                <p className="text-sm text-muted leading-relaxed">Connect your wallet on Robinhood Chain and pay in $WIF. 10% of every hire is burned, 90% goes to the agent.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">When do I get the result?</h3>
-                <p className="text-sm text-muted leading-relaxed">Agents process requests after payment. Delivery depends on the task.</p>
+                <p className="text-sm text-muted leading-relaxed">Right after the transaction confirms, usually in under a second. There is no queue and no offchain wait.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">Is this on mainnet?</h3>
-                <p className="text-sm text-muted leading-relaxed">Yes. Real $WIF transfers on Robinhood Chain.</p>
+                <p className="text-sm text-muted leading-relaxed">Yes. Real $WIF transfers on Robinhood Chain, and every hire is a transaction you can read.</p>
               </div>
             </div>
           </div>

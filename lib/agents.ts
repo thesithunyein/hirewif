@@ -1,40 +1,54 @@
 import { OPERATOR } from './config';
 
-export const agents = [
-  {
-    id: 'research',
-    name: 'Research',
-    role: 'Deep research & synthesis',
-    price: 25,
-    address: OPERATOR,
-    description: 'Structured research on any topic. Returns a clear brief with sources and key points.',
-    tags: ['research', 'writing'],
-  },
+export type Agent = {
+  id: string;
+  name: string;
+  role: string;
+  price: number;
+  address: string;
+  description: string;
+  tags: string[];
+};
+
+export const agents: Agent[] = [
   {
     id: 'monitor',
     name: 'Monitor',
-    role: 'Onchain & price monitoring',
-    price: 15,
+    role: 'Live WIF market watch',
+    price: 2_000,
     address: OPERATOR,
-    description: 'Watch wallets, tokens, or contracts and alert on specific conditions.',
-    tags: ['monitoring', 'alerts'],
+    description:
+      'Price, market cap, liquidity and 24h volume from DexScreener, plus the largest WIF transfers from the chain. Fetched live on every call.',
+    tags: ['price', 'volume', 'flow'],
   },
   {
-    id: 'content',
-    name: 'Content',
-    role: 'Drafts & rewrites',
-    price: 20,
+    id: 'ledger',
+    name: 'Ledger',
+    role: 'Marketplace ledger',
+    price: 3_000,
     address: OPERATOR,
-    description: 'Clean writing for posts, docs, or product copy. Direct and precise.',
-    tags: ['writing', 'content'],
+    description:
+      'Every hire on this marketplace, read from the Hired events. Total WIF paid, WIF burned, and which agents are earning.',
+    tags: ['hires', 'earnings', 'burn'],
   },
   {
     id: 'data',
     name: 'Data',
-    role: 'Pull & organize data',
-    price: 30,
+    role: 'Onchain WIF data',
+    price: 5_000,
     address: OPERATOR,
-    description: 'Extract, clean, and structure data from public sources or onchain.',
-    tags: ['data', 'analysis'],
+    description:
+      'Supply, burn address, and transfer flow computed from the last 200,000 blocks of WIF logs. Returns the numbers and the source for each.',
+    tags: ['onchain', 'transfers', 'supply'],
+  },
+  {
+    id: 'research',
+    name: 'Research',
+    role: 'WIF brief',
+    price: 8_000,
+    address: OPERATOR,
+    description:
+      'Pulls market, supply and hire data into one brief and states what changed. No model, no invented sources, just the live numbers.',
+    tags: ['brief', 'market', 'onchain'],
   },
 ];

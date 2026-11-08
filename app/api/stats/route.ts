@@ -1,0 +1,20 @@
+import { NextResponse } from 'next/server';
+import { getHires } from '@/lib/wif';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const hires = await getHires();
+    return NextResponse.json({
+      count: hires.count,
+      paid: hires.paid,
+      burned: hires.burned,
+      earning: hires.earning.slice(0, 5),
+      recent: hires.recent,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch {
+    return NextResponse.json({ error: 'chain read failed' }, { status: 502 });
+  }
+}

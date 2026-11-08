@@ -1,21 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildReport } from '@/lib/report';
 
-const templates: Record<string, (task: string) => string> = {
-  research: (task) =>
-    `Research brief: ${task}\n\nSummary\nThe topic was analyzed for core definitions, current state, and key open questions.\n\nKey points\n• Primary concept identified and scoped\n• 3 supporting sources noted\n• Risks and unknowns listed\n\nNext steps\nReview sources and expand any section as needed.`,
-  monitor: (task) =>
-    `Monitor configured: ${task}\n\nWatching\n• Price and volume changes\n• Large transfers\n• Relevant contract events\n\nStatus\nActive. Alerts will surface when conditions are met.`,
-  content: (task) =>
-    `Draft: ${task}\n\nOutput\nClean, direct copy ready for use. Tone is neutral and precise.\n\nNotes\nReady to publish or refine further.`,
-  data: (task) =>
-    `Data result: ${task}\n\nExtracted\nKey fields pulled and cleaned.\n\nStructure\nRows organized. Export-ready format prepared.`,
-};
+export const dynamic = 'force-dynamic';
+
+const AGENTS = new Set(['monitor', 'data', 'ledger', 'research']);
 
 export async function POST(req: NextRequest) {
-  const { agent, task } = await req.json();
-  if (!agent || !task) {
-    return NextResponse.json({ error: 'Missing agent or task' }, { status: 400 });
+  let body: { agent?: string; task?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const result = templates[agent]?.(task) || `Completed: ${task}`;
-  return NextResponse.json({ result });
+
+  const agent = String(body.agent ?? '');
+  const task = String(body.task ?? '').trim();
+
+  if (!AGENTS.has(agent) || !task) {
+    return NextResponse.json({ error: 'Missing or unknown agent, or empty task' }, { status: 400 });
+  }
+  if (task.length > 500) {
+    return NextResponse.json({ error: 'Task is too long (500 characters max)' }, { status: 400 });
+  }
+
+  const report = await buildReport(agent, task);
+  return NextResponse.json(report);
 }

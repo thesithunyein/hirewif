@@ -2,11 +2,10 @@
 
 import Link from 'next/link';
 import { ConnectButton } from '@/components/ConnectButton';
-import { AgentCard } from '@/components/AgentCard';
+import { AgentDirectory } from '@/components/AgentDirectory';
 import { Logo } from '@/components/Logo';
 import { History } from '@/components/History';
 import { Activity } from '@/components/Activity';
-import { agents } from '@/lib/agents';
 
 export default function Marketplace() {
   return (
@@ -31,19 +30,17 @@ export default function Marketplace() {
         <div className="mb-12">
           <h1 className="text-3xl font-medium tracking-tight">Agents</h1>
           <p className="mt-3 text-muted max-w-md">
-            Describe a task. Pay in $WIF. Agent delivers. 10% is burned on every hire.
+            Ask about WIF. Pay in $WIF. Every answer is read live from Robinhood Chain and DexScreener, and 10% of each hire is burned.
           </p>
         </div>
 
         <Activity />
 
-        <div className="grid sm:grid-cols-2 gap-6">
-          {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
+        <AgentDirectory />
 
-        <History />
+        <div className="mt-16">
+          <History />
+        </div>
       </main>
 
       <footer className="border-t border-line">

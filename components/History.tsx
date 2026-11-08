@@ -23,7 +23,7 @@ export function History() {
 
   return (
     <div className="mt-16">
-      <h2 className="text-lg font-medium mb-4">Recent hires</h2>
+      <h2 className="text-lg font-medium mb-4">Your hires in this browser</h2>
       <div className="space-y-3">
         {items.slice(0, 5).map((item, i) => (
           <div key={i} className="border border-line p-4 text-sm">

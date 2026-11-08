@@ -28,6 +28,8 @@ interface Agent {
   address: string;
   description: string;
   tags: string[];
+  paid?: number;
+  hires?: number;
 }
 
 export function AgentCard({ agent }: { agent: Agent }) {
@@ -40,7 +42,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
   const [step, setStep] = useState<'idle' | 'approving' | 'hiring' | 'done'>('idle');
 
   const amount = parseUnits(agent.price.toString(), 18);
-  const burn = Math.round(agent.price * BURN_BPS / 10000);
+  const burn = Math.floor(agent.price * BURN_BPS / 10000);
   const toOperator = agent.price - burn;
 
   const { data: allowance } = useReadContract({
@@ -97,9 +99,13 @@ export function AgentCard({ agent }: { agent: Agent }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent: agent.id, task }),
       })
-        .then((r) => r.json())
-        .then((data) => {
-          setResult(data.result || 'Completed.');
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data.error || 'The agent could not complete this task.');
+          return data;
+        })
+        .then((data: { result?: string; updatedAt?: string }) => {
+          setResult(data.result || 'No data returned.');
           const entry = {
             agent: agent.name,
             task,
@@ -112,6 +118,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
           const prev = JSON.parse(localStorage.getItem('hirewif-history') || '[]');
           localStorage.setItem('hirewif-history', JSON.stringify([entry, ...prev].slice(0, 20)));
         })
+        .catch((e: Error) => setResult(`Payment went through, but the result failed: ${e.message}`))
         .finally(() => setLoadingResult(false));
     }
   }, [isSuccess, step]);
@@ -149,9 +156,16 @@ export function AgentCard({ agent }: { agent: Agent }) {
       />
 
       <div className="flex items-center justify-between text-xs text-muted">
-        <span>{agent.price} WIF total</span>
-        <span>{toOperator} to operator · {burn} burned</span>
+        <span>{agent.price.toLocaleString('en-US')} WIF total</span>
+        <span>
+          {toOperator.toLocaleString('en-US')} to agent · {burn.toLocaleString('en-US')} burned
+        </span>
       </div>
+      {agent.paid && agent.paid > 0 ? (
+        <div className="text-xs text-muted -mt-2">
+          {agent.paid.toLocaleString('en-US')} WIF earned · {agent.hires} hire{agent.hires === 1 ? '' : 's'}
+        </div>
+      ) : null}
 
       <button
         onClick={handleHire}
@@ -164,7 +178,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
       {step === 'done' && (
         <div className="text-xs space-y-2 pt-2 border-t border-line">
           <div className="text-muted">
-            Payment sent. {burn} WIF burned onchain.{' '}
+            Payment sent. {burn.toLocaleString('en-US')} WIF burned onchain.{' '}
             {hash && (
               <a
                 href={`https://robinhoodchain.blockscout.com/tx/${hash}`}

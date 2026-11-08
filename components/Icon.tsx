@@ -12,6 +12,9 @@ export function Icon({ name, className = "w-5 h-5" }: { name: string; className?
     data: (
       <path d="M4 6l8-3 8 3v12l-8 3-8-3V6zm8 1.2L6.5 9.5v8.3L12 20.5l5.5-2.7V9.5L12 7.2z" />
     ),
+    ledger: (
+      <path d="M5 3h11l3 3v15H5V3zm2 2v14h10V7h-2V5H7zm2 4h6v2H9V9zm0 4h6v2H9v-2zm0 4h4v2H9v-2z" />
+    ),
   };
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
