@@ -6,6 +6,7 @@ export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as Addr
 const RPC_URL = process.env.ROBINHOOD_RPC ?? 'https://rpc.mainnet.chain.robinhood.com';
 const DEPLOY_BLOCK = 108_500_000n;
 const FLOW_WINDOW = 200_000n;
+const LOG_CHUNK = 50_000n;
 
 const client = createPublicClient({ chain: robinhood, transport: http(RPC_URL) });
 
@@ -184,13 +185,21 @@ export type Hires = {
 export async function getHires(): Promise<Hires> {
   return cached('hires', 30_000, async () => {
     try {
-      const logs = await client.getLogs({
-        address: HIRE_CONTRACT,
-        event: HIRED,
-        fromBlock: DEPLOY_BLOCK,
-        toBlock: 'latest',
-        strict: true,
-      });
+      const latest = await client.getBlockNumber({ cacheTime: 0 });
+      const logs = [];
+
+      for (let fromBlock = DEPLOY_BLOCK; fromBlock <= latest; fromBlock += LOG_CHUNK) {
+        const toBlock = fromBlock + LOG_CHUNK - 1n > latest ? latest : fromBlock + LOG_CHUNK - 1n;
+        const chunk = await client.getLogs({
+          address: HIRE_CONTRACT,
+          event: HIRED,
+          fromBlock,
+          toBlock,
+          strict: true,
+        });
+        logs.push(...chunk);
+      }
+
       const hires: Hire[] = logs.map((log) => ({
         user: String(log.args.user),
         agent: String(log.args.agent),
