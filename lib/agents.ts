@@ -48,7 +48,7 @@ export const agents: Agent[] = [
     price: 1_000,
     address: OPERATOR,
     description:
-      'A short brief with market, supply, and hire data. Every number includes its source.',
+      'A decision brief with live market conditions, supply context, marketplace traction, risks, and source links.',
     tags: ['brief', 'market', 'onchain'],
   },
 ];

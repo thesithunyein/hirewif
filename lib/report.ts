@@ -90,6 +90,42 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
   lines.push(`Answered from live data · ${stamp}`);
   lines.push('');
 
+  if (agent === 'research') {
+    lines.push('RESEARCH READOUT');
+    if (!market && !onchain && !hires) {
+      lines.push('  unavailable right now · the live sources did not answer. No conclusion shown.');
+    } else {
+      if (market) {
+        const turnover = market.liquidityUsd > 0 ? market.volume24h / market.liquidityUsd : 0;
+        const momentum =
+          market.change24h > 5 ? 'positive momentum' :
+          market.change24h < -5 ? 'negative momentum' :
+          'mixed or flat momentum';
+        const liquidity =
+          turnover >= 1 ? 'high activity relative to displayed liquidity' :
+          turnover >= 0.25 ? 'moderate activity relative to displayed liquidity' :
+          'lower activity relative to displayed liquidity';
+        lines.push(`  signal: ${momentum}; ${liquidity}.`);
+        lines.push(`  context: ${pct(market.change24h)} over 24h, ${usd(market.volume24h)} volume against ${usd(market.liquidityUsd)} liquidity.`);
+      }
+      if (onchain) {
+        const burnedShare = onchain.supply > 0 ? (onchain.burned / onchain.supply) * 100 : 0;
+        lines.push(
+          `  supply: ${burnedShare.toFixed(4)}% of reported supply is held by the burn address; the hire contract currently holds ${num(onchain.hireContractBalance)} WIF because hires are split immediately.`
+        );
+      }
+      if (hires) {
+        const topAgent = hires.agents[0];
+        lines.push(
+          `  traction: ${num(hires.count)} recorded hire${hires.count === 1 ? '' : 's'}, ${num(hires.paid)} WIF paid, and ${num(hires.burned)} WIF burned${topAgent ? `; ${topAgent.agent} leads usage with ${topAgent.hires} hire${topAgent.hires === 1 ? '' : 's'}` : ''}.`
+        );
+      }
+      lines.push('  decision note: this is a current-data brief, not a price prediction or a recommendation to buy or sell.');
+      lines.push('  confidence: conclusions are limited to the sources and time windows shown below; no historical baseline or wallet-label analysis is included.');
+    }
+    lines.push('');
+  }
+
   if (sections.includes('market')) {
     lines.push('WIF MARKET');
     if (!market) {
@@ -101,7 +137,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
       lines.push(
         `  ${pad('24h volume', 15)}${usd(market.volume24h)}   ${num(market.buys24h)} buys · ${num(market.sells24h)} sells`
       );
-      sources.push(`DexScreener ${market.dex} pair ${addr(market.pair)}`);
+      sources.push(`DexScreener ${market.dex} pair ${addr(market.pair)} · https://dexscreener.com/robinhood/${market.pair}`);
       const turnover = market.liquidityUsd > 0 ? market.volume24h / market.liquidityUsd : 0;
       lines.push(
         `  read: ${turnover.toFixed(1)}x the pool turned over in 24h, ${market.change24h >= 0 ? 'price up' : 'price down'} ${Math.abs(market.change24h).toFixed(1)}% on the day.`
@@ -119,7 +155,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
       lines.push(`  ${pad('total supply', 15)}${num(onchain.supply)} WIF`);
       lines.push(`  ${pad('burned address', 15)}${num(onchain.burned)} WIF (${burnedShare.toFixed(4)}% of supply)`);
       lines.push(`  ${pad('hire contract', 15)}${num(onchain.hireContractBalance)} WIF held`);
-      sources.push('Robinhood Chain RPC · totalSupply and balanceOf');
+      sources.push('Robinhood Chain RPC · totalSupply and balanceOf · https://robinhoodchain.blockscout.com/address/0x5173b8eA6923c2d40267890D45C46a3480954773');
     }
     lines.push('');
   }
@@ -137,7 +173,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
           lines.push(`    ${num(t.value)} WIF  ${addr(t.from)} → ${addr(t.to)}  tx ${addr(t.tx)}`);
         }
       }
-      sources.push('Robinhood Chain RPC · WIF Transfer logs');
+      sources.push('Robinhood Chain RPC · WIF Transfer logs · https://robinhoodchain.blockscout.com/token/0x5173b8eA6923c2d40267890D45C46a3480954773');
     }
     lines.push('');
   }
@@ -149,7 +185,7 @@ export async function buildReport(agent: string, task: string): Promise<Report> 
     } else if (hires.count === 0) {
       lines.push('  0 hires recorded on this contract.');
       lines.push('  Every hire writes a Hired event to Robinhood Chain, so this is the count, not a sample.');
-      sources.push('Robinhood Chain RPC · HireWif Hired logs');
+      sources.push('Robinhood Chain RPC · HireWif Hired logs · https://robinhoodchain.blockscout.com/address/0x423B8701Da3a251a3A3fc2d241b71e8d05744C91');
     } else {
       lines.push(`  ${pad('hires', 15)}${num(hires.count)}`);
       lines.push(`  ${pad('paid', 15)}${num(hires.paid)} WIF`);
