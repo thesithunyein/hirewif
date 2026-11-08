@@ -4,7 +4,7 @@ import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
   title: 'HireWif',
-  description: 'Hire agents for concrete tasks. Pay in $WIF.',
+  description: 'Get live WIF data and sourced answers. Pay agents in WIF.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

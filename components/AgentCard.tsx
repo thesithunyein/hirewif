@@ -176,16 +176,16 @@ export function AgentCard({ agent }: { agent: Agent }) {
       <textarea
         value={task}
         onChange={(e) => setTask(e.target.value)}
-        placeholder="Describe the task..."
+        placeholder="What do you want to know?"
         rows={3}
         className="w-full border border-line px-3 py-2 text-sm resize-none focus:outline-none focus:border-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         disabled={step === 'done'}
       />
 
       <div className="flex items-center justify-between text-xs text-muted">
-        <span>{agent.price.toLocaleString('en-US')} WIF total</span>
+        <span>{agent.price.toLocaleString('en-US')} WIF</span>
         <span>
-          {toOperator.toLocaleString('en-US')} to operator · {burn.toLocaleString('en-US')} burned
+          {toOperator.toLocaleString('en-US')} operator · {burn.toLocaleString('en-US')} burned
         </span>
       </div>
       {agent.paid && agent.paid > 0 ? (
@@ -200,14 +200,14 @@ export function AgentCard({ agent }: { agent: Agent }) {
         aria-busy={busy}
         className="w-full min-h-10 py-2.5 text-sm bg-ink text-paper transition-opacity duration-100 ease-out active:translate-y-px disabled:opacity-40 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
       >
-        {busy ? (step === 'approving' ? 'Approving…' : 'Hiring…') : step === 'done' ? 'Hired' : needsApproval ? 'Approve & Hire' : 'Hire'}
+        {busy ? (step === 'approving' ? 'Approving payment…' : 'Sending payment…') : step === 'done' ? 'Paid' : needsApproval ? 'Approve & hire' : 'Hire agent'}
       </button>
-      {writeError && <div role="alert" className="text-xs text-red-700">Transaction failed. Check your wallet and try again.</div>}
+      {writeError && <div role="alert" className="text-xs text-red-700">Payment failed. Check your wallet and try again.</div>}
 
       {step === 'done' && (
         <div className="text-xs space-y-2 pt-2 border-t border-line">
           <div className="text-muted">
-            Payment sent. {burn.toLocaleString('en-US')} WIF burned onchain.{' '}
+            Payment confirmed. {burn.toLocaleString('en-US')} WIF burned.{' '}
             {hash && (
               <a
                 href={`https://robinhoodchain.blockscout.com/tx/${hash}`}
@@ -215,11 +215,11 @@ export function AgentCard({ agent }: { agent: Agent }) {
                 rel="noreferrer"
                 className="underline"
               >
-                View tx
+                Check payment
               </a>
             )}
           </div>
-          {loadingResult && <div className="text-muted">Generating result…</div>}
+          {loadingResult && <div className="text-muted">Getting your answer…</div>}
           {result && (
             <>
               <pre className="text-xs whitespace-pre-wrap text-ink bg-soft p-3 rounded">{result}</pre>
@@ -228,7 +228,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
                 onClick={shareResult}
                 className="min-h-10 text-left text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               >
-                {shared ? 'Copied report' : 'Share this report'}
+                {shared ? 'Copied' : 'Share answer'}
               </button>
               {reportUrl && (
                 <a
@@ -237,7 +237,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
                   rel="noreferrer"
                   className="block min-h-10 pt-2 text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                 >
-                  Open public report
+                  Open public receipt
                 </a>
               )}
             </>

@@ -38,7 +38,7 @@ export function AgentDirectory() {
       </div>
       {failed && (
         <p className="mt-3 text-xs text-muted">
-          Chain read failed, so prices and earnings below may be stale. Nothing is estimated.
+          Live marketplace data is unavailable. Prices and totals may be out of date.
         </p>
       )}
     </div>

@@ -12,7 +12,7 @@ export default function Home() {
             HireWif
           </Link>
           <nav className="flex items-center gap-8 text-sm">
-            <Link href="/marketplace" className="text-muted hover:text-ink">Agents</Link>
+            <Link href="/marketplace" className="text-muted hover:text-ink">Browse agents</Link>
             <a href="https://x.com/hirewif" target="_blank" rel="noreferrer" className="text-muted hover:text-ink" aria-label="X">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             </a>
@@ -26,17 +26,17 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-xl">
               <h1 className="text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
-                Ask the chain.
+                Get answers from the chain.
               </h1>
               <p className="mt-5 text-muted leading-relaxed">
-                WIF price, volume, onchain flow and marketplace activity. Pay per answer in $WIF, 10% burns.
+                Get live WIF prices, volume, transfers, and marketplace activity. Pay in WIF. 10% is burned.
               </p>
               <div className="mt-8">
                 <Link
                   href="/marketplace"
                   className="inline-flex px-5 py-2.5 bg-ink text-paper text-sm font-medium hover:opacity-90"
                 >
-                  View agents
+                  Browse agents
                 </Link>
               </div>
             </div>
@@ -60,18 +60,18 @@ export default function Home() {
             <div className="grid sm:grid-cols-3 gap-10">
               <div>
                 <div className="text-xs text-muted mb-2">01</div>
-                <h3 className="font-medium mb-1.5">Choose</h3>
-                <p className="text-sm text-muted leading-relaxed">Pick the agent that matches your question.</p>
+                <h3 className="font-medium mb-1.5">Choose an agent</h3>
+                <p className="text-sm text-muted leading-relaxed">Pick the agent that can answer your question.</p>
               </div>
               <div>
                 <div className="text-xs text-muted mb-2">02</div>
-                <h3 className="font-medium mb-1.5">Ask</h3>
-                <p className="text-sm text-muted leading-relaxed">Describe what you want to know. Pay in $WIF, 10% burns.</p>
+                <h3 className="font-medium mb-1.5">Ask your question</h3>
+                <p className="text-sm text-muted leading-relaxed">Write what you want to know, then pay the listed price in WIF.</p>
               </div>
               <div>
                 <div className="text-xs text-muted mb-2">03</div>
-                <h3 className="font-medium mb-1.5">Read</h3>
-                <p className="text-sm text-muted leading-relaxed">The answer comes back with the numbers and their sources.</p>
+                <h3 className="font-medium mb-1.5">Get the answer</h3>
+                <p className="text-sm text-muted leading-relaxed">See the result, its sources, and the payment onchain.</p>
               </div>
             </div>
           </div>
@@ -80,15 +80,15 @@ export default function Home() {
         <section className="border-t border-line">
           <div className="max-w-5xl mx-auto px-6 py-20">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-medium tracking-tight">Why WIF belongs in the loop</h2>
+              <h2 className="text-2xl font-medium tracking-tight">Every answer has proof</h2>
               <p className="mt-4 text-muted leading-relaxed">
-                Every answer has a real cost and a public receipt. 90% pays the operator who keeps the data path running; 10% is burned onchain. The more useful the agents become, the more useful the marketplace becomes.
+                You pay in WIF and get a public receipt. 90% goes to the agent operator and 10% is burned onchain. You can check the answer, payment, and sources yourself.
               </p>
               <Link
                 href="/marketplace"
                 className="mt-6 inline-flex min-h-10 items-center border border-ink px-4 text-sm hover:bg-ink hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               >
-                Try a live agent
+                Try an agent
               </Link>
             </div>
           </div>
@@ -100,19 +100,19 @@ export default function Home() {
             <div className="space-y-8 max-w-2xl">
               <div>
                 <h3 className="font-medium mb-1">What can I ask?</h3>
-                <p className="text-sm text-muted leading-relaxed">WIF price and volume, onchain transfers, supply and burns, and every hire on this marketplace. Each answer is read from DexScreener and Robinhood Chain when you ask.</p>
+                <p className="text-sm text-muted leading-relaxed">Ask about WIF price, volume, transfers, supply, burns, or marketplace activity. Agents read current data from DexScreener and Robinhood Chain.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">How do I pay?</h3>
-                <p className="text-sm text-muted leading-relaxed">Connect your wallet on Robinhood Chain and pay in $WIF. 10% of every hire is burned; the other 90% goes to the operator who runs that agent.</p>
+                <p className="text-sm text-muted leading-relaxed">Connect an EVM wallet on Robinhood Chain and pay the listed WIF price. 10% is burned and 90% goes to the operator.</p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">When do I get the result?</h3>
-                <p className="text-sm text-muted leading-relaxed">Right after the transaction confirms, usually in under a second. There is no queue and no offchain wait.</p>
+                <p className="text-sm text-muted leading-relaxed">After your payment confirms, usually in under a second.</p>
               </div>
               <div>
-                <h3 className="font-medium mb-1">Is this on mainnet?</h3>
-                <p className="text-sm text-muted leading-relaxed">Yes. Real $WIF transfers on Robinhood Chain, and every hire is a transaction you can read.</p>
+                <h3 className="font-medium mb-1">Is this real?</h3>
+                <p className="text-sm text-muted leading-relaxed">Yes. Hires use real WIF on Robinhood Chain. You can open every payment in Blockscout.</p>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@ export default function Home() {
             <div className="flex gap-12 text-sm">
               <div>
                 <div className="font-medium mb-2">Product</div>
-                <Link href="/marketplace" className="block text-muted hover:text-ink">Agents</Link>
+                <Link href="/marketplace" className="block text-muted hover:text-ink">Browse agents</Link>
               </div>
               <div>
                 <div className="font-medium mb-2">Network</div>

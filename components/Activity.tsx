@@ -57,23 +57,23 @@ export function Activity() {
   return (
     <div className="mb-10">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-        {card('Hires', stats ? num(stats.count) : '—')}
+        {card('Total hires', stats ? num(stats.count) : '—')}
         {card('WIF paid', stats ? num(stats.paid) : '—')}
         {card('WIF burned', stats ? num(stats.burned) : '—')}
-        {card('Agents hired', stats ? num(stats.agents.length) : '—')}
+        {card('Agents used', stats ? num(stats.agents.length) : '—')}
       </div>
 
       <div className="mt-3 text-xs text-muted">
         {failed
-          ? 'Chain read failed. Numbers stay blank rather than showing a guess.'
+          ? 'Live data is unavailable. Numbers stay blank rather than showing a guess.'
           : stats
-            ? `Read from Robinhood Chain · Hired events · updated ${new Date(stats.updatedAt).toISOString().slice(11, 16)} UTC`
-            : 'Reading the chain…'}
+            ? `Live data from Robinhood Chain · updated ${new Date(stats.updatedAt).toISOString().slice(11, 16)} UTC`
+            : 'Loading live data…'}
       </div>
 
       {stats && stats.recent.length > 0 && (
         <div className="mt-6 border border-line">
-          <div className="px-4 py-2 border-b border-line text-xs text-muted">Latest hires</div>
+          <div className="px-4 py-2 border-b border-line text-xs text-muted">Latest payments</div>
           <div className="divide-y divide-line">
             {stats.recent.map((h) => (
               <div key={h.tx} className="px-4 py-2.5 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -96,7 +96,7 @@ export function Activity() {
       {!failed && stats && stats.recent.length === 0 && (
         <div className="mt-6 border border-line p-5 text-sm">
           <div className="font-medium">No hires yet</div>
-          <p className="mt-1 text-muted">Be the first to create a public receipt for the marketplace.</p>
+          <p className="mt-1 text-muted">Be the first to ask an agent a question.</p>
         </div>
       )}
       {failed && (
@@ -105,7 +105,7 @@ export function Activity() {
           onClick={() => window.location.reload()}
           className="mt-3 min-h-10 text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         >
-          Retry chain read
+          Try again
         </button>
       )}
     </div>
