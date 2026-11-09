@@ -106,6 +106,39 @@ Four agents, priced by the site:
 
 Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the constructor. There is no third-party payee on the deployed contract.
 
+## Operator registry (V3)
+
+`contracts/HireWifV3.sol` turns the single-operator rail into a market.
+
+- `register(agentId, price, payout, bond)` — any wallet can list an agent. The contract pulls a WIF bond of at least 10x the listed price and holds it.
+- `hire(agentId, taskHash, nonce)` — the price comes from the registry, not from the client. 90% accrues to the agent's payout, 10% is burned. A nonce per wallet blocks replays.
+- `commit(hireId, answerHash)` — the operator has `COMMIT_WINDOW` (300 blocks) to record an answer hash.
+- `claimRefund(hireId)` — if nothing was committed in time, the hirer takes the full payment back out of the operator's bond.
+- `withdrawEarnings()` / `closeAgent(agentId)` — operators pull their 90% and recover the bond once every hire has settled.
+
+There is still no owner, pause, upgrade or rescue path. Earnings are pull-based, so a reverting payout address cannot block hires.
+
+V3 is not deployed by this repo yet, and the live site keeps using V1 until `NEXT_PUBLIC_HIRE_V3_CONTRACT` is set. Deploy and then point the site at it:
+
+```bash
+forge create contracts/HireWifV3.sol:HireWifV3 \
+  --rpc-url https://rpc.mainnet.chain.robinhood.com \
+  --private-key $PK
+```
+
+Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement, the 90/10 split, commit-window expiry, refund-from-bond, double refunds, nonce replay and bond recovery on close.
+
+## Environment
+
+Copy `.env.example`. Nothing below is required to run the site locally.
+
+| Variable | Purpose |
+|---|---|
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Durable watchlists, report shares and pulse history. Without them those endpoints answer `{"durable": false}` and store nothing. |
+| `ROBINHOOD_RPC` | Override the public Robinhood Chain RPC. |
+| `NEXT_PUBLIC_HIRE_CONTRACT` / `NEXT_PUBLIC_HIRE_CONTRACT_VERSION` | Pin the live hire rail (V1 by default). |
+| `NEXT_PUBLIC_HIRE_V3_CONTRACT` | Address of the deployed operator registry. Listings stay hidden until this is set. |
+
 ## Stack
 
 - Next.js 14 (App Router, TypeScript)
@@ -198,11 +231,11 @@ Then put the printed address in `lib/config.ts` as `HIRE_CONTRACT`.
 read -rsp "private key: " PK && echo && PK=$PK node scripts/seed.mjs
 ```
 
-The script reads the contract address from `lib/config.ts` and prices from `lib/agents.ts`, refuses to run if the wallet is short on WIF or ETH, and approves only the exact total.
+The script reads the contract address from `lib/config.ts` and prices from `lib/agents.ts`, refuses to run if the wallet is short on WIF, and approves only the exact total.
 
 ## Security
 
-- The deployed contract is 60 lines. No owner, pause, upgrade, rescue or withdrawal function.
+- The deployed V1 contract is 30 lines. No owner, pause, upgrade, rescue or withdrawal function.
 - The operator address is fixed by the constructor and cannot be changed afterwards.
 - The burn address is a constant, so the 10% cannot be redirected.
 - Approvals are for the exact hire amount. Users keep custody of their $WIF.

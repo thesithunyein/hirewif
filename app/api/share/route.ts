@@ -19,12 +19,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Verified transaction and wallet required' }, { status: 400 });
   }
 
+  // Sharing still works client-side without storage; only the counter needs it.
   const sharedReports = await recordShare(tx, address);
-  if (sharedReports === null) {
-    return NextResponse.json(
-      { error: 'Sharing metrics require durable storage' },
-      { status: 503, headers: { 'Cache-Control': 'no-store' } }
-    );
-  }
-  return NextResponse.json({ sharedReports }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json(
+    { sharedReports, durable: sharedReports !== null },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }

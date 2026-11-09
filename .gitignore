@@ -12,3 +12,4 @@ contracts/out/
 
 .vercel
 .env*
+!.env.example
