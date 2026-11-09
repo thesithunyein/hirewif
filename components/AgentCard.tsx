@@ -171,6 +171,13 @@ export function AgentCard({ agent }: { agent: Agent }) {
       } else {
         await navigator.clipboard.writeText(text);
       }
+      if (hash && address) {
+        await fetch('/api/share', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tx: hash, address }),
+        }).catch(() => undefined);
+      }
       setShared(true);
       window.setTimeout(() => setShared(false), 1500);
     } catch {

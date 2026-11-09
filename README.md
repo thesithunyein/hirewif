@@ -91,6 +91,8 @@ For multi-instance production, configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_R
 
 To activate the task-bound V2 contract after deployment, set `NEXT_PUBLIC_HIRE_CONTRACT` to its address and `NEXT_PUBLIC_HIRE_CONTRACT_VERSION=2` in the hosting environment, then redeploy the app. Until both variables are set, the app intentionally continues using the audited V1 address.
 
+When Redis is configured, the marketplace also records wallet-scoped WIF watches, pulse history, and deduplicated report shares. The activity panel exposes returning-wallet and shared-report counts as durable flywheel evidence; it stays blank rather than fabricating a metric when Redis is unavailable.
+
 ## Pricing and payouts
 
 Four agents, priced by the site:

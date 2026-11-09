@@ -15,6 +15,9 @@ type Stats = {
   count: number;
   paid: number;
   burned: number;
+  uniqueUsers: number;
+  repeatUsers: number;
+  sharedReports: number | null;
   agents: { agent: string; paid: number; hires: number }[];
   recent: Hire[];
   updatedAt: string;
@@ -56,11 +59,12 @@ export function Activity() {
 
   return (
     <div className="mb-10">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-sm">
         {card('Total hires', stats ? num(stats.count) : '—')}
         {card('WIF paid', stats ? num(stats.paid) : '—')}
         {card('WIF burned', stats ? num(stats.burned) : '—')}
-        {card('Agents used', stats ? num(stats.agents.length) : '—')}
+        {card('Returning wallets', stats ? num(stats.repeatUsers) : '—')}
+        {card('Shared reports', stats?.sharedReports !== null && stats ? num(stats.sharedReports) : '—')}
       </div>
 
       <div className="mt-3 text-xs text-muted">
