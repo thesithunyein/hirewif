@@ -10,3 +10,5 @@ dist
 cache/
 contracts/out/
 
+.vercel
+.env*
