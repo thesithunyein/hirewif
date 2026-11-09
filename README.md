@@ -150,6 +150,21 @@ Delivery order: Knock when `KNOCK_API_KEY` and a recipient email are present, th
 account. The route refuses to run without `CRON_SECRET`, so it cannot be used to message
 people. Nothing is marked as delivered unless a provider accepted it.
 
+## What verification checks
+
+Before an answer is built, the server reads the hire transaction and checks independently:
+
+- the transaction succeeded and was sent to the HireWif contract by the payer's wallet;
+- the contract's `Hired` event names the requested agent and the listed price;
+- the WIF `Transfer` logs move exactly that price from the payer to the contract;
+- the burn share reaches `0x…dEaD`, and the remainder reaches the operator (V1) or accrues
+  to the operator's withdrawable earnings (V3);
+- the hire has not already been answered, via a one-time key in Redis.
+
+On V3 the question is bound as well: the event's task hash must match the task being answered,
+which V1 cannot enforce. None of this proves an answer is factually correct, and `/report`
+says exactly that rather than implying otherwise.
+
 ## Receipts and stats
 
 A paid answer can be shared as a public receipt. The server signs the payload with

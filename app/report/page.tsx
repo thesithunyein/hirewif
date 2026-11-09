@@ -23,6 +23,7 @@ export default function ReportPage({ searchParams }: { searchParams: Params }) {
           name: one(searchParams.name),
           task: one(searchParams.task),
           result: one(searchParams.result),
+          resultHash: '',
           price: one(searchParams.price),
           burn: one(searchParams.burn),
           operator: one(searchParams.operator),
@@ -104,6 +105,24 @@ export default function ReportPage({ searchParams }: { searchParams: Params }) {
                 <div className="text-xs text-muted">Operator payout</div>
                 <div className="mt-1 font-mono tabular-nums">{report.operator} WIF</div>
               </div>
+            </div>
+
+            <div className="mt-3 border border-line p-4">
+              <div className="text-xs text-muted">Result hash (sha256)</div>
+              <div className="mt-1 break-all font-mono text-xs">
+                {report.resultHash || 'Not included in unsigned links'}
+              </div>
+            </div>
+
+            <div className="mt-8 border-t border-line pt-5 text-xs leading-relaxed text-muted">
+              <div className="font-medium text-ink">What this proves</div>
+              <p className="mt-2">
+                The payment is a real WIF transfer on Robinhood Chain: the payer funded the listed
+                price, the burn share reached the burn address, and the remainder reached the
+                operator. The result hash binds this text to this receipt. None of that says the
+                answer is factually correct — only that this agent produced it for this question and
+                was paid for it.
+              </p>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-4 text-sm">

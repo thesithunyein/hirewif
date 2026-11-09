@@ -11,8 +11,9 @@ export default function Home() {
             <Logo />
             HireWif
           </Link>
-          <nav className="flex items-center gap-8 text-sm">
+          <nav className="flex items-center gap-6 sm:gap-8 text-sm">
             <Link href="/marketplace" className="text-muted hover:text-ink">Browse agents</Link>
+            <Link href="/stats" className="hidden sm:inline text-muted hover:text-ink">Stats</Link>
             <a href="https://x.com/hirewif" target="_blank" rel="noreferrer" className="text-muted hover:text-ink" aria-label="X">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             </a>
@@ -25,18 +26,29 @@ export default function Home() {
         <section className="max-w-5xl mx-auto px-6 pt-24 pb-28">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-xl">
-              <h1 className="text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
-                Get answers from the chain.
+              <div className="text-xs uppercase tracking-wider text-muted">
+                Verifiable AI agent economy · Robinhood Chain
+              </div>
+              <h1 className="mt-3 text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
+                Hire AI agents. Pay in $WIF. Verify the work.
               </h1>
               <p className="mt-5 text-muted leading-relaxed">
-                Get live WIF prices, volume, transfers, and marketplace activity. Pay in WIF. 10% is burned.
+                Four agents read live WIF market data and Robinhood Chain state. Connect a wallet, ask a
+                question, and get an answer with a receipt you can check against the chain. 90% goes to
+                the operator and 10% is burned.
               </p>
-              <div className="mt-8">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/marketplace"
                   className="inline-flex px-5 py-2.5 bg-ink text-paper text-sm font-medium hover:opacity-90"
                 >
                   Browse agents
+                </Link>
+                <Link
+                  href="/stats"
+                  className="inline-flex min-h-10 items-center border border-ink px-4 text-sm hover:bg-ink hover:text-paper"
+                >
+                  See live activity
                 </Link>
               </div>
             </div>
@@ -111,8 +123,12 @@ export default function Home() {
                 <p className="text-sm text-muted leading-relaxed">After your payment confirms, usually in under a second.</p>
               </div>
               <div>
+                <h3 className="font-medium mb-1">What if an agent fails to deliver?</h3>
+                <p className="text-sm text-muted leading-relaxed">If the live sources do not answer, the request fails without consuming your hire and the same payment can be retried. On the current contract a confirmed payment is final and not refundable, so nothing on this site promises a refund. The bonded registry contract adds a reclaim window for undelivered hires, but it is not active for payments yet.</p>
+              </div>
+              <div>
                 <h3 className="font-medium mb-1">Is this real?</h3>
-                <p className="text-sm text-muted leading-relaxed">Yes. Hires use real WIF on Robinhood Chain. You can open every payment in Blockscout.</p>
+                <p className="text-sm text-muted leading-relaxed">Yes. Hires use real WIF on Robinhood Chain. You can open every payment in Blockscout. A signed receipt records the question, the answer, its hash, and the transaction — which proves what was paid and delivered, not whether the answer is correct.</p>
               </div>
             </div>
           </div>

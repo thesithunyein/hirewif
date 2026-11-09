@@ -1,4 +1,4 @@
-import { createPublicClient, http, formatUnits, keccak256, parseAbiItem, parseEventLogs, parseUnits, toBytes, type Address, type Hash } from 'viem';
+import { createPublicClient, http, formatUnits, keccak256, parseAbiItem, parseEventLogs, parseUnits, toBytes, type Address, type Hash, type Log } from 'viem';
 import { robinhood, WIF_ADDRESS } from './chain';
 import { HIRE_CONTRACT, HIRE_CONTRACT_VERSION } from './config';
 import { agents } from './agents';
@@ -31,6 +31,25 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
 
 export function redemptionKey(rail: 'v1' | 'v3', txHash: string): string {
   return `${rail}:${txHash.toLowerCase()}`;
+}
+
+/**
+ * Sum of WIF actually moved between two addresses inside a transaction.
+ * The contract's own event is a claim about a payment; the token transfers are the payment,
+ * so both are checked and the wrong token cannot pass.
+ */
+function wifMoved(logs: readonly Log[], from: string, to: string): bigint {
+  const wantFrom = from.toLowerCase();
+  const wantTo = to.toLowerCase();
+  let total = 0n;
+  for (const event of parseEventLogs({ abi: [TRANSFER], logs: [...logs], strict: false })) {
+    if (event.address.toLowerCase() !== WIF_ADDRESS.toLowerCase()) continue;
+    const args = event.args as { from?: string; to?: string; value?: bigint };
+    if (args.from?.toLowerCase() === wantFrom && args.to?.toLowerCase() === wantTo) {
+      total += args.value ?? 0n;
+    }
+  }
+  return total;
 }
 
 const client = createPublicClient({ chain: robinhood, transport: http(RPC_URL) });
@@ -316,7 +335,15 @@ export async function verifyV1Hire(agentId: string, _task: string, txHash: Hash,
         (HIRE_CONTRACT_VERSION === 1 || args.taskHash === keccak256(toBytes(_task.trim())))
       );
     });
-    return valid;
+    if (!valid) return false;
+
+    // Independently confirm the WIF movements the contract claims: the payer funded the
+    // exact price, 10% reached the burn address, and the remainder reached the operator.
+    return (
+      wifMoved(receipt.logs, payer, HIRE_CONTRACT) === expectedPaid &&
+      wifMoved(receipt.logs, HIRE_CONTRACT, BURN_ADDRESS) === expectedBurned &&
+      wifMoved(receipt.logs, HIRE_CONTRACT, agent.address) === expectedPaid - expectedBurned
+    );
   } catch {
     return false;
   }
@@ -369,6 +396,13 @@ export async function verifyV3Hire(
     });
 
     if (!match) return miss;
+
+    // V3 pulls the price and burns its share immediately; operator earnings accrue in the
+    // contract, so the payout leg is withdrawn later rather than transferred here.
+    const paid = (match.args as { paid?: bigint }).paid ?? 0n;
+    const burned = (match.args as { burned?: bigint }).burned ?? 0n;
+    if (wifMoved(receipt.logs, payer, HIRE_V3_ADDRESS) !== paid) return miss;
+    if (burned > 0n && wifMoved(receipt.logs, HIRE_V3_ADDRESS, BURN_ADDRESS) !== burned) return miss;
 
     const args = match.args as { hireId?: bigint };
     return { ok: true, hireId: args.hireId ?? null };

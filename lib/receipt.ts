@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 export type ReceiptPayload = {
   v: 1;
@@ -6,12 +6,19 @@ export type ReceiptPayload = {
   name: string;
   task: string;
   result: string;
+  /** sha256 of the delivered answer, so a shared receipt can be matched to the exact text. */
+  resultHash: string;
   price: string;
   burn: string;
   operator: string;
   tx: string;
   at: string;
 };
+
+/** Content hash of an answer. Anyone holding the answer can recompute it. */
+export function hashResult(result: string): string {
+  return `sha256:${createHash('sha256').update(result, 'utf8').digest('hex')}`;
+}
 
 const encode = (value: Buffer) => value.toString('base64url');
 

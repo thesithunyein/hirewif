@@ -3,7 +3,7 @@ import { buildReport } from '@/lib/report';
 import { claimRedemption } from '@/lib/redemption';
 import { redemptionKey, verifyV1Hire, verifyV3Hire } from '@/lib/wif';
 import { commitAnswer } from '@/lib/commit';
-import { signReceipt } from '@/lib/receipt';
+import { hashResult, signReceipt } from '@/lib/receipt';
 import { HIRE_V3_CONFIGURED } from '@/lib/v3';
 import { agents } from '@/lib/agents';
 import { isAddress, isHash, type Hash } from 'viem';
@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     name: meta?.name ?? agent,
     task,
     result: report.result,
+    resultHash: hashResult(report.result),
     price: String(meta?.price ?? ''),
     burn: String(burn),
     operator: String(meta ? meta.price - burn : ''),
