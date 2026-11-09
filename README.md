@@ -141,9 +141,16 @@ Copy `.env.example`. Nothing below is required to run the site locally.
 
 ## Alerts
 
-A saved watch is only worth something if it fires. `/api/alerts/run` is scheduled by
-`vercel.json` every 30 minutes, reads every saved watch from Redis, compares the live 24h
-move against each threshold, and delivers at most one alert per wallet per 6 hours.
+A saved watch is only worth something if it fires. `/api/alerts/run` reads every saved watch
+from Redis, compares the live 24h move against each threshold, and delivers at most one alert
+per wallet per 6 hours.
+
+Vercel's Hobby plan rejects any cron that runs more than once a day, and a rejected cron fails
+the **entire deployment** rather than just the schedule. `vercel.json` therefore schedules one
+daily run at 00:00 UTC. For a tighter loop on Hobby, point an external scheduler (cron-job.org,
+a GitHub Action, any uptime pinger) at `/api/alerts/run?key=$CRON_SECRET` every 15 minutes; Pro
+can use `*/15 * * * *` in `vercel.json` instead. Never put a sub-daily schedule in `vercel.json`
+while the project is on Hobby: it silently freezes the site on its last good build.
 
 Delivery order: Knock when `KNOCK_API_KEY` and a recipient email are present, then a plain
 `ALERT_WEBHOOK_URL` (Discord/Slack style) so the loop can be demonstrated without a vendor
