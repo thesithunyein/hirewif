@@ -2,11 +2,11 @@
 
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { WIF_ADDRESS, WIF_ABI, robinhood } from '@/lib/chain';
-import { HIRE_CONTRACT, BURN_BPS } from '@/lib/config';
+import { HIRE_CONTRACT, BURN_BPS, HIRE_CONTRACT_VERSION } from '@/lib/config';
+import { HIRE_V3_ABI, HIRE_V3_ADDRESS, taskHashFor } from '@/lib/v3';
 import { keccak256, parseUnits, toBytes } from 'viem';
 import { Icon } from './Icon';
 import { useState, useEffect } from 'react';
-import { HIRE_CONTRACT_VERSION } from '@/lib/config';
 
 const HIRE_ABI = [
   {
@@ -47,7 +47,9 @@ interface Agent {
   hires?: number;
 }
 
-export function AgentCard({ agent }: { agent: Agent }) {
+export type V3Listing = { key: `0x${string}`; price: number; bond: number; active: boolean };
+
+export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listing }) {
   const { isConnected, address } = useAccount();
   const { writeContract, data: hash, isPending, error: writeError, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -58,53 +60,75 @@ export function AgentCard({ agent }: { agent: Agent }) {
   const [reportUrl, setReportUrl] = useState('');
   const [step, setStep] = useState<'idle' | 'approving' | 'hiring' | 'done'>('idle');
   const [intent, setIntent] = useState<{ taskHash: `0x${string}`; nonce: bigint } | null>(null);
+  const [committed, setCommitted] = useState<boolean | null>(null);
 
-  const amount = parseUnits(agent.price.toString(), 18);
-  const burn = Math.floor(agent.price * BURN_BPS / 10000);
-  const toOperator = agent.price - burn;
-  const hireArgs = HIRE_CONTRACT_VERSION === 2 && intent
-    ? [agent.id, amount, intent.taskHash, intent.nonce] as const
-    : [agent.id, amount] as const;
+  // On V3 the price comes from the registry and the payment is bound to the question.
+  const onV3 = Boolean(HIRE_V3_ADDRESS && listing?.active);
+  const price = onV3 ? (listing as V3Listing).price : agent.price;
+  const amount = parseUnits(String(price), 18);
+  const burn = Math.floor((price * BURN_BPS) / 10000);
+  const toOperator = price - burn;
+  const approveTarget = onV3 ? (HIRE_V3_ADDRESS as `0x${string}`) : HIRE_CONTRACT;
 
   const { data: allowance } = useReadContract({
     address: WIF_ADDRESS,
     abi: WIF_ABI,
     functionName: 'allowance',
-    args: address ? [address, HIRE_CONTRACT] : undefined,
+    args: address ? [address, approveTarget] : undefined,
     chainId: robinhood.id,
     query: { enabled: !!address },
   });
 
   const needsApproval = !allowance || allowance < amount;
 
+  const startHire = () => {
+    if (onV3) {
+      writeContract({
+        address: HIRE_V3_ADDRESS as `0x${string}`,
+        abi: HIRE_V3_ABI,
+        functionName: 'hire',
+        args: [(listing as V3Listing).key, taskHashFor(task), BigInt(Date.now())],
+        chainId: robinhood.id,
+      });
+      return;
+    }
+    if (HIRE_CONTRACT_VERSION === 2 && intent) {
+      writeContract({
+        address: HIRE_CONTRACT,
+        abi: HIRE_V2_ABI,
+        functionName: 'hire',
+        args: [agent.id, amount, intent.taskHash, intent.nonce],
+        chainId: robinhood.id,
+      });
+      return;
+    }
+    writeContract({
+      address: HIRE_CONTRACT,
+      abi: HIRE_ABI,
+      functionName: 'hire',
+      args: [agent.id, amount],
+      chainId: robinhood.id,
+    });
+  };
+
   const handleHire = () => {
     if (!isConnected || !task.trim()) return;
-    const nextIntent = HIRE_CONTRACT_VERSION === 2
-      ? { taskHash: keccak256(toBytes(task.trim())), nonce: BigInt(Date.now()) }
-      : null;
-    setIntent(nextIntent);
-    const nextArgs = HIRE_CONTRACT_VERSION === 2 && nextIntent
-      ? [agent.id, amount, nextIntent.taskHash, nextIntent.nonce] as const
-      : [agent.id, amount] as const;
+    if (HIRE_CONTRACT_VERSION === 2 && !onV3) {
+      setIntent({ taskHash: keccak256(toBytes(task.trim())), nonce: BigInt(Date.now()) });
+    }
     if (needsApproval) {
       setStep('approving');
       writeContract({
         address: WIF_ADDRESS,
         abi: WIF_ABI,
         functionName: 'approve',
-        args: [HIRE_CONTRACT, amount],
+        args: [approveTarget, amount],
         chainId: robinhood.id,
       });
-    } else {
-      setStep('hiring');
-      writeContract({
-        address: HIRE_CONTRACT,
-        abi: HIRE_CONTRACT_VERSION === 2 ? HIRE_V2_ABI : HIRE_ABI,
-        functionName: 'hire',
-        args: nextArgs,
-        chainId: robinhood.id,
-      });
+      return;
     }
+    setStep('hiring');
+    startHire();
   };
 
   useEffect(() => {
@@ -112,13 +136,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
     if (step === 'approving') {
       setStep('hiring');
       reset();
-      writeContract({
-        address: HIRE_CONTRACT,
-        abi: HIRE_CONTRACT_VERSION === 2 ? HIRE_V2_ABI : HIRE_ABI,
-        functionName: 'hire',
-        args: hireArgs,
-        chainId: robinhood.id,
-      });
+      startHire();
     } else if (step === 'hiring' && !result && !loadingResult) {
       setStep('done');
       setLoadingResult(true);
@@ -132,14 +150,15 @@ export function AgentCard({ agent }: { agent: Agent }) {
           if (!r.ok) throw new Error(data.error || 'The agent could not complete this task.');
           return data;
         })
-        .then((data: { result?: string; updatedAt?: string }) => {
+        .then((data: { result?: string; committed?: boolean }) => {
           setResult(data.result || 'No data returned.');
+          setCommitted(typeof data.committed === 'boolean' ? data.committed : null);
           const params = new URLSearchParams({
             agent: agent.id,
             name: agent.name,
             task,
             result: data.result || 'No data returned.',
-            price: String(agent.price),
+            price: String(price),
             burn: String(burn),
             operator: String(toOperator),
             tx: hash || '',
@@ -160,6 +179,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
         .catch((e: Error) => setResult(`Payment went through, but the result failed: ${e.message}`))
         .finally(() => setLoadingResult(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, step]);
 
   const busy = isPending || isConfirming;
@@ -216,12 +236,16 @@ export function AgentCard({ agent }: { agent: Agent }) {
       />
 
       <div className="flex items-center justify-between text-xs text-muted">
-        <span>{agent.price.toLocaleString('en-US')} WIF</span>
+        <span>{price.toLocaleString('en-US')} WIF</span>
         <span>
           {toOperator.toLocaleString('en-US')} operator · {burn.toLocaleString('en-US')} burned
         </span>
       </div>
-      {agent.paid && agent.paid > 0 ? (
+      {onV3 ? (
+        <div className="text-xs text-muted -mt-2">
+          Bond-backed · {(listing as V3Listing).bond.toLocaleString('en-US')} WIF locked · payment tied to your question
+        </div>
+      ) : agent.paid && agent.paid > 0 ? (
         <div className="text-xs text-muted -mt-2">
           {agent.paid.toLocaleString('en-US')} WIF earned · {agent.hires} hire{agent.hires === 1 ? '' : 's'}
         </div>
@@ -252,6 +276,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
               </a>
             )}
           </div>
+          {committed === true && <div className="text-muted">Answer hash committed onchain.</div>}
           {loadingResult && <div className="text-muted">Getting your answer…</div>}
           {result && (
             <>

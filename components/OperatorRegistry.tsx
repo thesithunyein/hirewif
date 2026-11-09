@@ -7,9 +7,9 @@ import {
   useWaitForTransactionReceipt,
   useWriteContract,
 } from 'wagmi';
-import { keccak256, parseUnits, toBytes } from 'viem';
+import { parseUnits } from 'viem';
 import { robinhood, WIF_ABI, WIF_ADDRESS } from '@/lib/chain';
-import { HIRE_V3_ABI, HIRE_V3_ADDRESS, HIRE_V3_CONFIGURED } from '@/lib/v3';
+import { HIRE_V3_ABI, HIRE_V3_ADDRESS, HIRE_V3_CONFIGURED, agentKeyFor } from '@/lib/v3';
 
 type RegistryAgent = {
   id: string;
@@ -80,7 +80,7 @@ export function OperatorRegistry() {
 
   const handleRegister = () => {
     if (!canSubmit || !HIRE_V3_ADDRESS) return;
-    const key = keccak256(toBytes(agentId.trim().toLowerCase()));
+    const key = agentKeyFor(agentId);
     if (needsApproval) {
       setStep('approving');
       writeContract({
@@ -106,7 +106,7 @@ export function OperatorRegistry() {
     if (!isSuccess) return;
     if (step === 'approving') {
       setStep('registering');
-      const key = keccak256(toBytes(agentId.trim().toLowerCase()));
+      const key = agentKeyFor(agentId);
       if (!HIRE_V3_ADDRESS) return;
       writeContract({
         address: HIRE_V3_ADDRESS,

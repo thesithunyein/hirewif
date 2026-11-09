@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { address?: string; threshold?: number };
+  let body: { address?: string; threshold?: number; email?: string };
   try {
     body = await req.json();
   } catch {
@@ -31,11 +31,16 @@ export async function POST(req: NextRequest) {
   }
   const address = String(body.address ?? '');
   const threshold = Number(body.threshold ?? 5);
+  const email = body.email ? String(body.email).trim() : undefined;
   if (!isAddress(address) || !Number.isFinite(threshold) || threshold < 1 || threshold > 100) {
     return NextResponse.json({ error: 'Valid wallet address and threshold required' }, { status: 400 });
   }
+  // Optional channel: an email only matters when a delivery provider is configured.
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return NextResponse.json({ error: 'That email address does not look valid' }, { status: 400 });
+  }
   if (!process.env.UPSTASH_REDIS_REST_URL) return notDurable();
-  const watch = await saveWatch(address, threshold);
+  const watch = await saveWatch(address, threshold, email);
   if (!watch) return notDurable();
   return NextResponse.json({ watch, durable: true }, { headers: { 'Cache-Control': 'no-store' } });
 }

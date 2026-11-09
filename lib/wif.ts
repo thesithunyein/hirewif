@@ -3,6 +3,7 @@ import { robinhood, WIF_ADDRESS } from './chain';
 import { HIRE_CONTRACT, HIRE_CONTRACT_VERSION } from './config';
 import { agents } from './agents';
 import { claimRedemption } from './redemption';
+import { HIRE_V3_ADDRESS, agentKeyFor, taskHashFor } from './v3';
 
 export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as Address;
 const RPC_URL = process.env.ROBINHOOD_RPC ?? 'https://rpc.mainnet.chain.robinhood.com';
@@ -32,6 +33,9 @@ const WIF_READ_ABI = [
 const TRANSFER = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
 const HIRED = parseAbiItem('event Hired(address indexed user, string agent, uint256 paid, uint256 burned)');
 const HIRED_V2 = parseAbiItem('event Hired(address indexed user, string agent, uint256 paid, uint256 burned, bytes32 taskHash, uint256 nonce)');
+const HIRED_V3 = parseAbiItem(
+  'event Hired(uint256 indexed hireId, bytes32 indexed agentId, address indexed hirer, uint256 paid, uint256 burned, bytes32 taskHash, uint256 nonce)'
+);
 
 type Hit = { at: number; value: unknown };
 const cache = new Map<string, Hit>();
@@ -277,6 +281,58 @@ export async function claimHirePayment(agentId: string, _task: string, txHash: H
     return await claimRedemption(claimKey);
   } catch {
     return false;
+  }
+}
+
+/**
+ * Verify a V3 hire before releasing an answer.
+ * Binds the payment to the exact question: the task hash committed in the event
+ * must match the task the caller is asking about, which V1 could not check.
+ */
+export async function claimHirePaymentV3(
+  agentId: string,
+  task: string,
+  txHash: Hash,
+  payer: string
+): Promise<{ ok: boolean; hireId: bigint | null }> {
+  const miss = { ok: false, hireId: null } as const;
+  if (!HIRE_V3_ADDRESS) return miss;
+
+  try {
+    const receipt = await client.getTransactionReceipt({ hash: txHash });
+    if (receipt.status !== 'success') return miss;
+    if (receipt.to?.toLowerCase() !== HIRE_V3_ADDRESS.toLowerCase()) return miss;
+    if (receipt.from.toLowerCase() !== payer.toLowerCase()) return miss;
+
+    const expectedKey = agentKeyFor(agentId).toLowerCase();
+    const expectedTask = taskHashFor(task).toLowerCase();
+
+    const events = parseEventLogs({ abi: [HIRED_V3], logs: receipt.logs, strict: false });
+    const match = events.find((event) => {
+      if (event.address.toLowerCase() !== HIRE_V3_ADDRESS!.toLowerCase()) return false;
+      const args = event.args as {
+        hirer?: string;
+        agentId?: string;
+        paid?: bigint;
+        burned?: bigint;
+        taskHash?: string;
+      };
+      if (args.hirer?.toLowerCase() !== payer.toLowerCase()) return false;
+      if ((args.agentId ?? '').toLowerCase() !== expectedKey) return false;
+      if ((args.taskHash ?? '').toLowerCase() !== expectedTask) return false;
+      const paid = args.paid ?? 0n;
+      return paid > 0n && args.burned === (paid * 1000n) / 10_000n;
+    });
+
+    if (!match) return miss;
+
+    const claimed = await claimRedemption(`v3:${txHash.toLowerCase()}`);
+    if (!claimed) return miss;
+
+    const args = match.args as { hireId?: bigint };
+    return { ok: true, hireId: args.hireId ?? null };
+  } catch {
+    return miss;
   }
 }
 

@@ -36,6 +36,7 @@ export function Pulse() {
   const [following, setFollowing] = useState(false);
   const [lastVisit, setLastVisit] = useState<{ at: number; priceUsd: number; change24h: number } | null>(null);
   const [threshold, setThreshold] = useState(5);
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('hirewif-follow-wif');
@@ -45,10 +46,11 @@ export function Pulse() {
     if (address) {
       fetch(`/api/watchlist?address=${address}`, { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
-        .then((value: { watch?: { threshold: number } } | null) => {
+        .then((value: { watch?: { threshold: number; email?: string } } | null) => {
           if (value?.watch) {
             setFollowing(true);
             setThreshold(value.watch.threshold);
+            setEmail(value.watch.email ?? '');
             localStorage.setItem('hirewif-follow-wif', 'true');
             localStorage.setItem('hirewif-wif-threshold', String(value.watch.threshold));
           }
@@ -85,7 +87,7 @@ export function Pulse() {
       fetch(next ? '/api/watchlist' : `/api/watchlist?address=${address}`, {
         method: next ? 'POST' : 'DELETE',
         headers: next ? { 'Content-Type': 'application/json' } : undefined,
-        body: next ? JSON.stringify({ address, threshold }) : undefined,
+        body: next ? JSON.stringify({ address, threshold, email: email || undefined }) : undefined,
       }).catch(() => undefined);
     }
   };
@@ -97,7 +99,7 @@ export function Pulse() {
       fetch('/api/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, threshold: value }),
+        body: JSON.stringify({ address, threshold: value, email: email || undefined }),
       }).catch(() => undefined);
     }
   };
@@ -191,6 +193,24 @@ export function Pulse() {
           <div className="mt-4 text-xs text-muted">
             Updated {new Date(data.updatedAt).toISOString().slice(11, 16)} UTC · {following ? 'your watch is saved on this device' : 'follow WIF to track changes when you return'}
           </div>
+          {following && (
+            <div className="mt-3">
+              <label className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                <span>Email me when it trips</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  onBlur={() => address && updateThreshold(threshold)}
+                  placeholder="you@example.com (optional)"
+                  className="min-h-10 w-52 border border-line bg-paper px-2.5 text-xs focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                />
+              </label>
+              <p className="mt-1 text-xs text-muted">
+                Saved with your wallet watch. Without an email or a delivery provider configured, the alert shows here when you return.
+              </p>
+            </div>
+          )}
           {following && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
               <span>Alert me at</span>

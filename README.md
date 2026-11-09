@@ -139,6 +139,17 @@ Copy `.env.example`. Nothing below is required to run the site locally.
 | `NEXT_PUBLIC_HIRE_CONTRACT` / `NEXT_PUBLIC_HIRE_CONTRACT_VERSION` | Pin the live hire rail (V1 by default). |
 | `NEXT_PUBLIC_HIRE_V3_CONTRACT` | Address of the deployed operator registry. Listings stay hidden until this is set. |
 
+## Alerts
+
+A saved watch is only worth something if it fires. `/api/alerts/run` is scheduled by
+`vercel.json` every 30 minutes, reads every saved watch from Redis, compares the live 24h
+move against each threshold, and delivers at most one alert per wallet per 6 hours.
+
+Delivery order: Knock when `KNOCK_API_KEY` and a recipient email are present, then a plain
+`ALERT_WEBHOOK_URL` (Discord/Slack style) so the loop can be demonstrated without a vendor
+account. The route refuses to run without `CRON_SECRET`, so it cannot be used to message
+people. Nothing is marked as delivered unless a provider accepted it.
+
 ## Stack
 
 - Next.js 14 (App Router, TypeScript)

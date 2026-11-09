@@ -1,3 +1,5 @@
+import { keccak256, toBytes } from 'viem';
+
 export const HIRE_V3_ABI = [
   {
     name: 'register',
@@ -139,3 +141,12 @@ export const HIRE_V3_ADDRESS = /^0x[0-9a-fA-F]{40}$/.test(raw) ? (raw as `0x${st
 export const HIRE_V3_CONFIGURED = HIRE_V3_ADDRESS !== null;
 
 export const BOND_MULTIPLE = 10n;
+
+/** Registry keys are keccak256 of the normalised agent id, on both the site and the contract. */
+export function agentKeyFor(id: string): `0x${string}` {
+  return keccak256(toBytes(id.trim().toLowerCase()));
+}
+
+export function taskHashFor(task: string): `0x${string}` {
+  return keccak256(toBytes(task.trim()));
+}
