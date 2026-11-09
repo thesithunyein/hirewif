@@ -10,6 +10,28 @@ const RPC_URL = process.env.ROBINHOOD_RPC ?? 'https://rpc.mainnet.chain.robinhoo
 const DEPLOY_BLOCK = 108_500_000n;
 const FLOW_WINDOW = 200_000n;
 const LOG_CHUNK = 50_000n;
+const FLOW_CHUNK = 20_000n;
+const CHUNK_TIMEOUT_MS = 12_000;
+
+type TransferLog = {
+  args?: { value?: bigint; from?: string; to?: string };
+  transactionHash?: string | null;
+};
+
+/** Hard ceiling per RPC call, so one slow window cannot hang a request. */
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('rpc chunk timed out')), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+export function redemptionKey(rail: 'v1' | 'v3', txHash: string): string {
+  return `${rail}:${txHash.toLowerCase()}`;
+}
 
 const client = createPublicClient({ chain: robinhood, transport: http(RPC_URL) });
 
@@ -130,16 +152,35 @@ export type Flow = {
 export async function getFlow(): Promise<Flow | null> {
   return cached('flow', 120_000, async () => {
     try {
-      const latest = await client.getBlockNumber({ cacheTime: 0 });
+      const latest = await withTimeout(client.getBlockNumber({ cacheTime: 0 }), CHUNK_TIMEOUT_MS);
       const from = latest - FLOW_WINDOW;
-      const [logs, headBlock, tailBlock] = await Promise.all([
-        client.getLogs({
-          address: WIF_ADDRESS,
-          event: TRANSFER,
-          fromBlock: from,
-          toBlock: latest,
-          strict: true,
-        }),
+
+      // Read the window in bounded chunks. A single 200k-block call is what most
+      // providers rate-limit, and a partial read would misreport the counts.
+      const logs: TransferLog[] = [];
+      const windows = Number(FLOW_WINDOW / FLOW_CHUNK);
+      for (let index = 0; index < windows; index += 1) {
+        const startBlock = from + FLOW_CHUNK * BigInt(index);
+        const endBlock = startBlock + FLOW_CHUNK - 1n > latest ? latest : startBlock + FLOW_CHUNK - 1n;
+        try {
+          const chunk = await withTimeout(
+            client.getLogs({
+              address: WIF_ADDRESS,
+              event: TRANSFER,
+              fromBlock: startBlock,
+              toBlock: endBlock,
+              strict: true,
+            }),
+            CHUNK_TIMEOUT_MS
+          );
+          for (const entry of chunk) logs.push(entry as unknown as TransferLog);
+        } catch {
+          // One failed window means the total is not the total. Say so instead.
+          return null;
+        }
+      }
+
+      const [headBlock, tailBlock] = await Promise.all([
         client.getBlock({ blockNumber: latest }),
         client.getBlock({ blockNumber: from }),
       ]);
@@ -199,13 +240,16 @@ export async function getHires(): Promise<Hires> {
 
       for (let fromBlock = DEPLOY_BLOCK; fromBlock <= latest; fromBlock += LOG_CHUNK) {
         const toBlock = fromBlock + LOG_CHUNK - 1n > latest ? latest : fromBlock + LOG_CHUNK - 1n;
-        const chunk = await client.getLogs({
-          address: HIRE_CONTRACT,
-          event: HIRED,
-          fromBlock,
-          toBlock,
-          strict: true,
-        });
+        const chunk = await withTimeout(
+          client.getLogs({
+            address: HIRE_CONTRACT,
+            event: HIRED,
+            fromBlock,
+            toBlock,
+            strict: true,
+          }),
+          CHUNK_TIMEOUT_MS
+        );
         logs.push(...chunk);
       }
 
@@ -244,10 +288,9 @@ export async function getHires(): Promise<Hires> {
   });
 }
 
-export async function claimHirePayment(agentId: string, _task: string, txHash: Hash, payer: string): Promise<boolean> {
+export async function verifyV1Hire(agentId: string, _task: string, txHash: Hash, payer: string): Promise<boolean> {
   const agent = agents.find((item) => item.id === agentId);
   if (!agent) return false;
-  const claimKey = txHash.toLowerCase();
 
   try {
     const receipt = await client.getTransactionReceipt({ hash: txHash });
@@ -273,15 +316,16 @@ export async function claimHirePayment(agentId: string, _task: string, txHash: H
         (HIRE_CONTRACT_VERSION === 1 || args.taskHash === keccak256(toBytes(_task.trim())))
       );
     });
-    if (!valid) return false;
-
-    // Bind the one-time redemption to the first submitted task in this runtime.
-    // The deployed contract predates task hashes, so this is the strongest server-side
-    // protection available until a task-aware contract is deployed.
-    return await claimRedemption(claimKey);
+    return valid;
   } catch {
     return false;
   }
+}
+
+/** Verify and consume in one step. The route uses the split form so a failed build costs nothing. */
+export async function claimHirePayment(agentId: string, task: string, txHash: Hash, payer: string): Promise<boolean> {
+  if (!(await verifyV1Hire(agentId, task, txHash, payer))) return false;
+  return claimRedemption(redemptionKey('v1', txHash));
 }
 
 /**
@@ -289,7 +333,7 @@ export async function claimHirePayment(agentId: string, _task: string, txHash: H
  * Binds the payment to the exact question: the task hash committed in the event
  * must match the task the caller is asking about, which V1 could not check.
  */
-export async function claimHirePaymentV3(
+export async function verifyV3Hire(
   agentId: string,
   task: string,
   txHash: Hash,
@@ -326,14 +370,24 @@ export async function claimHirePaymentV3(
 
     if (!match) return miss;
 
-    const claimed = await claimRedemption(`v3:${txHash.toLowerCase()}`);
-    if (!claimed) return miss;
-
     const args = match.args as { hireId?: bigint };
     return { ok: true, hireId: args.hireId ?? null };
   } catch {
     return miss;
   }
+}
+
+/** Verify and consume a V3 hire in one step. */
+export async function claimHirePaymentV3(
+  agentId: string,
+  task: string,
+  txHash: Hash,
+  payer: string
+): Promise<{ ok: boolean; hireId: bigint | null }> {
+  const verified = await verifyV3Hire(agentId, task, txHash, payer);
+  if (!verified.ok) return verified;
+  const claimed = await claimRedemption(redemptionKey('v3', txHash));
+  return claimed ? verified : { ok: false, hireId: null };
 }
 
 export async function getBlockTimes(blocks: number[]): Promise<Map<number, number>> {

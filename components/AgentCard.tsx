@@ -140,30 +140,44 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
     } else if (step === 'hiring' && !result && !loadingResult) {
       setStep('done');
       setLoadingResult(true);
-      fetch('/api/result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: agent.id, task, tx: hash, user: address }),
-      })
+      // A 503 means the payment was not consumed, so retrying is safe and protects the buyer.
+      const requestResult = async (attempt = 0): Promise<Response> => {
+        const response = await fetch('/api/result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agent: agent.id, task, tx: hash, user: address }),
+        });
+        if (response.status === 503 && attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+          return requestResult(attempt + 1);
+        }
+        return response;
+      };
+
+      requestResult()
         .then(async (r) => {
           const data = await r.json().catch(() => ({}));
           if (!r.ok) throw new Error(data.error || 'The agent could not complete this task.');
           return data;
         })
-        .then((data: { result?: string; committed?: boolean }) => {
+        .then((data: { result?: string; committed?: boolean; receipt?: string | null }) => {
           setResult(data.result || 'No data returned.');
           setCommitted(typeof data.committed === 'boolean' ? data.committed : null);
-          const params = new URLSearchParams({
-            agent: agent.id,
-            name: agent.name,
-            task,
-            result: data.result || 'No data returned.',
-            price: String(price),
-            burn: String(burn),
-            operator: String(toOperator),
-            tx: hash || '',
-          });
-          setReportUrl(`${window.location.origin}/report?${params.toString()}`);
+          if (data.receipt) {
+            setReportUrl(`${window.location.origin}/report?r=${encodeURIComponent(data.receipt)}`);
+          } else {
+            const params = new URLSearchParams({
+              agent: agent.id,
+              name: agent.name,
+              task,
+              result: data.result || 'No data returned.',
+              price: String(price),
+              burn: String(burn),
+              operator: String(toOperator),
+              tx: hash || '',
+            });
+            setReportUrl(`${window.location.origin}/report?${params.toString()}`);
+          }
           const entry = {
             agent: agent.name,
             task,

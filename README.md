@@ -150,6 +150,21 @@ Delivery order: Knock when `KNOCK_API_KEY` and a recipient email are present, th
 account. The route refuses to run without `CRON_SECRET`, so it cannot be used to message
 people. Nothing is marked as delivered unless a provider accepted it.
 
+## Receipts and stats
+
+A paid answer can be shared as a public receipt. The server signs the payload with
+`RECEIPT_SECRET` (HMAC-SHA256) and the link carries only that token, so the payment figures
+cannot be edited by whoever holds the URL. Links built from query parameters still render,
+but `/report` labels them **unverified** instead of presenting them as proof.
+
+`/stats` is the public, auditable view: hires, WIF paid and burned, unique and returning
+wallets, registry bonds and slashes, plus direct explorer links for every address. Numbers
+come from chain logs, and a failed read stays blank rather than showing a guess.
+
+RPC reads are chunked and time-boxed. A hire is verified before the answer is built and the
+payment is only consumed after a successful build, so a source outage returns a retryable
+503 instead of eating a paid request.
+
 ## Stack
 
 - Next.js 14 (App Router, TypeScript)

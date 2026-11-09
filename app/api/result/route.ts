@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildReport } from '@/lib/report';
-import { claimHirePayment, claimHirePaymentV3 } from '@/lib/wif';
+import { claimRedemption } from '@/lib/redemption';
+import { redemptionKey, verifyV1Hire, verifyV3Hire } from '@/lib/wif';
 import { commitAnswer } from '@/lib/commit';
+import { signReceipt } from '@/lib/receipt';
 import { HIRE_V3_CONFIGURED } from '@/lib/v3';
+import { agents } from '@/lib/agents';
 import { isAddress, isHash, type Hash } from 'viem';
 
 export const dynamic = 'force-dynamic';
@@ -29,26 +32,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Task is too long (500 characters max)' }, { status: 400 });
   }
 
-  // V3 binds the question to the payment, so the answer cannot be claimed with a
-  // different task than the one that was paid for.
+  const rail: 'v1' | 'v3' = HIRE_V3_CONFIGURED ? 'v3' : 'v1';
+
+  // 1. Verify the payment, without consuming it yet.
   let hireId: bigint | null = null;
-  if (HIRE_V3_CONFIGURED) {
-    const claim = await claimHirePaymentV3(agent, task, tx as Hash, user);
-    if (!claim.ok) {
+  if (rail === 'v3') {
+    const verified = await verifyV3Hire(agent, task, tx as Hash, user);
+    if (!verified.ok) {
       return NextResponse.json({ error: 'This hire transaction could not be verified. Pay for the agent first.' }, { status: 402 });
     }
-    hireId = claim.hireId;
-  } else {
-    const paid = await claimHirePayment(agent, task, tx as Hash, user);
-    if (!paid) {
-      return NextResponse.json({ error: 'This hire transaction could not be verified. Pay for the agent first.' }, { status: 402 });
-    }
+    hireId = verified.hireId;
+  } else if (!(await verifyV1Hire(agent, task, tx as Hash, user))) {
+    return NextResponse.json({ error: 'This hire transaction could not be verified. Pay for the agent first.' }, { status: 402 });
   }
 
-  const report = await buildReport(agent, task);
+  // 2. Build the answer. If the sources fail, the payment stays unconsumed so a retry works.
+  let report;
+  try {
+    report = await buildReport(agent, task);
+  } catch {
+    return NextResponse.json(
+      {
+        error: 'The live sources did not answer. Nothing was consumed - retry in a moment.',
+        retryable: true,
+        refundable: rail === 'v3',
+      },
+      { status: 503 }
+    );
+  }
 
-  // Record the answer hash onchain for V3 hires. Non-fatal: the buyer keeps their answer.
+  // 3. Consume the hire exactly once. If storage is down, serving a paying buyer beats
+  //    stranding their payment, so the answer is still returned and flagged.
+  let claimed = true;
+  try {
+    claimed = await claimRedemption(redemptionKey(rail, tx));
+  } catch {
+    claimed = true;
+  }
+  if (!claimed) {
+    return NextResponse.json({ error: 'This hire transaction was already used for an answer.', retryable: false }, { status: 409 });
+  }
+
+  // 4. Record the answer hash so the bond can only be reclaimed when nothing was delivered.
   const committed = hireId !== null ? await commitAnswer(hireId, report.result) : false;
 
-  return NextResponse.json({ ...report, committed, rail: HIRE_V3_CONFIGURED ? 'v3' : 'v1' });
+  const meta = agents.find((item) => item.id === agent);
+  const burn = meta ? Math.floor((meta.price * 1000) / 10000) : 0;
+
+  const receipt = signReceipt({
+    v: 1,
+    agent,
+    name: meta?.name ?? agent,
+    task,
+    result: report.result,
+    price: String(meta?.price ?? ''),
+    burn: String(burn),
+    operator: String(meta ? meta.price - burn : ''),
+    tx,
+    at: new Date().toISOString(),
+  });
+
+  return NextResponse.json({ ...report, committed, rail, receipt, receiptVerified: receipt !== null });
 }
