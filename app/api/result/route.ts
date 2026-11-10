@@ -15,6 +15,8 @@ export const maxDuration = 60;
 const AGENTS = new Set(['monitor', 'data', 'ledger', 'research']);
 
 const UNVERIFIED = 'This hire transaction could not be verified. Pay for the agent first.';
+const ALREADY_ANSWERED =
+  'This hire was already answered and its answer hash is committed onchain. The answer was delivered to the paying wallet when it was committed.';
 const EXPIRED =
   'This hire passed its 10 minute answer deadline without a committed answer, so no answer can be released. The full payment is refundable from the agent bond.';
 
@@ -70,6 +72,10 @@ export async function POST(req: NextRequest) {
     try {
       const state = await readHire(hireId);
       if (!state) return NextResponse.json({ error: UNVERIFIED }, { status: 402 });
+      if (state.committed) {
+        // Committed earlier, and the stored copy (checked above) is gone: it was delivered once.
+        return NextResponse.json({ error: ALREADY_ANSWERED, retryable: false, refundable: false }, { status: 409 });
+      }
       if (await hireClosed(state)) {
         return NextResponse.json({ error: EXPIRED, refundable: !state.refunded, hireId: hireId.toString() }, { status: 410 });
       }
@@ -109,6 +115,9 @@ export async function POST(req: NextRequest) {
     const outcome = await commitAnswer(hireId, report.result);
     if (outcome.status === 'expired') {
       return NextResponse.json({ error: EXPIRED, refundable: true, hireId: hireId.toString() }, { status: 410 });
+    }
+    if (outcome.status === 'failed' && outcome.reason === 'hire already committed with a different answer') {
+      return NextResponse.json({ error: ALREADY_ANSWERED, retryable: false, refundable: false }, { status: 409 });
     }
     if (outcome.status === 'failed') {
       await releaseRedemption(key).catch(() => undefined);
