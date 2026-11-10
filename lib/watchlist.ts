@@ -1,3 +1,4 @@
+import { redisToken, redisUrl } from './redis-env';
 export type Watch = {
   asset: 'wif';
   threshold: number;
@@ -9,8 +10,8 @@ const INDEX_KEY = 'hirewif:watch:index';
 const ALERT_TTL_SECONDS = 60 * 60 * 6;
 
 function redisConfig() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = redisUrl();
+  const token = redisToken();
   return url && token ? { url, token } : null;
 }
 

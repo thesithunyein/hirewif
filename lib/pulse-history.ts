@@ -1,4 +1,5 @@
 import type { Flow, Hires, Market } from './wif';
+import { redisToken, redisUrl } from './redis-env';
 
 type Snapshot = {
   at: number;
@@ -10,8 +11,8 @@ type Snapshot = {
 };
 
 function redisConfig() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = redisUrl();
+  const token = redisToken();
   return url && token ? { url, token } : null;
 }
 
