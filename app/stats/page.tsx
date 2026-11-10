@@ -4,7 +4,10 @@ import { getHires, getMarket, getOnchain } from '@/lib/wif';
 import { readRegistry } from '@/lib/registry';
 import { HIRE_CONTRACT } from '@/lib/config';
 import { WIF_ADDRESS } from '@/lib/chain';
-import { HIRE_V3_ADDRESS } from '@/lib/v3';
+import { HIRE_V3_ADDRESS, agentKeyFor } from '@/lib/v3';
+import { agents } from '@/lib/agents';
+
+const nameByKey = new Map(agents.map((agent) => [agentKeyFor(agent.id).toLowerCase(), agent.name]));
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -60,7 +63,32 @@ export default async function StatsPage() {
         </div>
 
         <section className="mt-12">
-          <h2 className="text-sm uppercase tracking-wider text-muted">Hires</h2>
+          <h2 className="text-sm uppercase tracking-wider text-muted">Bonded agent market</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {card('Agents listed', registry?.configured ? num(registry.listed) : 'not deployed')}
+            {card('Active agents', registry?.configured ? num(registry.active) : '—')}
+            {card('WIF bonded', registry?.configured ? num(registry.bonded) : '—', 'locked by operators')}
+            {card('Refunded to hirers', registry?.configured ? num(registry.slashed) : '—', 'slashed from bonds')}
+            {card('Bonded hires', registry?.configured ? num(registry.hires) : '—')}
+            {card('Burned by bonded hires', registry?.configured ? num(registry.burned) : '—')}
+          </div>
+          {registry?.agents.length ? (
+            <div className="mt-4 divide-y divide-line border border-line">
+              {registry.agents.map((agent) => (
+                <div key={agent.key} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-5 sm:items-center">
+                  <span className="font-medium">{nameByKey.get(agent.key.toLowerCase()) ?? addr(agent.key)}</span>
+                  <span>{num(agent.price)} WIF</span>
+                  <span className="text-muted">bond {num(agent.bond)}</span>
+                  <span className="text-muted">{agent.hires} hires</span>
+                  <span className="text-muted sm:text-right">{agent.active ? 'active' : 'closed'}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-12">
+          <h2 className="text-sm uppercase tracking-wider text-muted">All hires (V1 and bonded)</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {card('Total hires', hires ? num(hires.count) : '—')}
             {card('WIF paid', hires ? num(hires.paid) : '—')}
@@ -70,31 +98,6 @@ export default async function StatsPage() {
             {card('One-time wallets', hires ? num(repeated) : '—')}
           </div>
           {!hires && <p className="mt-3 text-xs text-muted">Chain read failed, so no hire totals are shown.</p>}
-        </section>
-
-        <section className="mt-12">
-          <h2 className="text-sm uppercase tracking-wider text-muted">Registry (V3)</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {card('Agents listed', registry?.configured ? num(registry.listed) : 'not deployed')}
-            {card('Active agents', registry?.configured ? num(registry.active) : '—')}
-            {card('WIF bonded', registry?.configured ? num(registry.bonded) : '—', 'locked by operators')}
-            {card('WIF slashed', registry?.configured ? num(registry.slashed) : '—', 'refunded to hirers')}
-            {card('V3 hires', registry?.configured ? num(registry.hires) : '—')}
-            {card('V3 burned', registry?.configured ? num(registry.burned) : '—')}
-          </div>
-          {registry?.agents.length ? (
-            <div className="mt-4 divide-y divide-line border border-line">
-              {registry.agents.map((agent) => (
-                <div key={agent.key} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-5 sm:items-center">
-                  <span className="font-mono text-xs">{addr(agent.key)}</span>
-                  <span>{num(agent.price)} WIF</span>
-                  <span className="text-muted">bond {num(agent.bond)}</span>
-                  <span className="text-muted">{agent.hires} hires</span>
-                  <span className="text-muted sm:text-right">{agent.active ? 'active' : 'closed'}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </section>
 
         <section className="mt-12">
@@ -124,7 +127,7 @@ export default async function StatsPage() {
               </a>
             </li>
             <li>
-              Hire rail (V1){' '}
+              Legacy hire rail (V1){' '}
               <a
                 className="font-mono underline underline-offset-4"
                 href={`https://robinhoodchain.blockscout.com/address/${HIRE_CONTRACT}`}
@@ -135,7 +138,7 @@ export default async function StatsPage() {
               </a>
             </li>
             <li>
-              Registry (V3){' '}
+              Bonded market (V3){' '}
               {HIRE_V3_ADDRESS ? (
                 <a
                   className="font-mono underline underline-offset-4"
@@ -152,7 +155,7 @@ export default async function StatsPage() {
           </ul>
           <p className="mt-6 text-xs leading-relaxed text-muted">
             Hire counts come from the <span className="font-mono">Hired</span> event log, so they are the count, not a
-            sample. Repeat wallets are wallets with more than one hire on the same contract.
+            sample. Hires from the legacy V1 rail and the bonded V3 market are counted together. Returning wallets are wallets with more than one hire.
           </p>
         </section>
       </main>
