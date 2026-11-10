@@ -120,7 +120,7 @@ export default function ReportPage({ searchParams }: { searchParams: Params }) {
                 The payment is a real WIF transfer on Robinhood Chain: the payer funded the listed
                 price, the burn share reached the burn address, and the remainder reached the
                 operator. The result hash binds this text to this receipt. None of that says the
-                answer is factually correct — only that this agent produced it for this question and
+                answer is factually correct. It shows that this agent produced it for this question and
                 was paid for it.
               </p>
             </div>

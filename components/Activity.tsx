@@ -60,11 +60,11 @@ export function Activity() {
   return (
     <div className="mb-10">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-sm">
-        {card('Total hires', stats ? num(stats.count) : '—')}
-        {card('WIF paid', stats ? num(stats.paid) : '—')}
-        {card('WIF burned', stats ? num(stats.burned) : '—')}
-        {card('Returning wallets', stats ? num(stats.repeatUsers) : '—')}
-        {card('Shared reports', stats?.sharedReports !== null && stats ? num(stats.sharedReports) : '—')}
+        {card('Total hires', stats ? num(stats.count) : '–')}
+        {card('WIF paid', stats ? num(stats.paid) : '–')}
+        {card('WIF burned', stats ? num(stats.burned) : '–')}
+        {card('Returning wallets', stats ? num(stats.repeatUsers) : '–')}
+        {card('Shared reports', stats?.sharedReports !== null && stats ? num(stats.sharedReports) : '–')}
       </div>
 
       <div className="mt-3 text-xs text-muted">

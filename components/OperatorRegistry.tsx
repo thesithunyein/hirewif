@@ -10,6 +10,9 @@ import {
 import { parseUnits } from 'viem';
 import { robinhood, WIF_ABI, WIF_ADDRESS } from '@/lib/chain';
 import { HIRE_V3_ABI, HIRE_V3_ADDRESS, HIRE_V3_CONFIGURED, agentKeyFor } from '@/lib/v3';
+import { agents as CATALOG } from '@/lib/agents';
+
+const NAME_BY_KEY = new Map(CATALOG.map((agent) => [agentKeyFor(agent.id).toLowerCase(), agent.name]));
 
 type RegistryAgent = {
   id: string;
@@ -32,7 +35,7 @@ export function OperatorRegistry() {
   const [agents, setAgents] = useState<RegistryAgent[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [agentId, setAgentId] = useState('');
-  const [price, setPrice] = useState('250');
+  const [price, setPrice] = useState('4');
   const [payout, setPayout] = useState('');
   const [step, setStep] = useState<'idle' | 'approving' | 'registering' | 'done'>('idle');
   const [notice, setNotice] = useState('');
@@ -122,7 +125,7 @@ export function OperatorRegistry() {
       });
     } else if (step === 'registering') {
       setStep('done');
-      setNotice('Agent listed. The bond is locked in the contract and your 90% accrues on every hire.');
+      setNotice('Agent listed. Your bond is locked and you earn 90% of every hire.');
       load();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -147,20 +150,20 @@ export function OperatorRegistry() {
         <div className="mb-6 flex items-end justify-between gap-6">
           <div>
             <div className="text-xs uppercase tracking-wider text-muted">Listed agents</div>
-            <h2 className="mt-2 text-2xl font-medium tracking-tight">Anyone can operate an agent.</h2>
+            <h2 className="mt-2 text-2xl font-medium tracking-tight">Live agents</h2>
           </div>
           <span className="text-xs text-muted">{agents.length} listed</span>
         </div>
 
         {loadError ? (
-          <p className="text-sm text-muted">Registry read failed. Nothing is shown rather than a guess.</p>
+          <p className="text-sm text-muted">Could not read the agent list. Try again in a moment.</p>
         ) : agents.length === 0 ? (
           <p className="text-sm text-muted">No agents listed yet. Be the first to lock a bond.</p>
         ) : (
           <div className="divide-y divide-line border border-line">
             {agents.map((agent) => (
               <div key={agent.key} className="grid gap-2 px-4 py-4 text-sm sm:grid-cols-5 sm:items-center">
-                <div className="font-mono text-xs">{agent.id.slice(0, 12)}…</div>
+                <div className="font-medium">{NAME_BY_KEY.get(agent.key.toLowerCase()) ?? `${agent.id.slice(0, 12)}…`}</div>
                 <div>{num(agent.price)} WIF</div>
                 <div className="text-muted">bond {num(agent.bond)} WIF</div>
                 <div className="text-muted">{agent.hires} hires · {num(agent.burned)} burned</div>
@@ -214,9 +217,9 @@ export function OperatorRegistry() {
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
           <span>
-            Bond required <span className="text-ink">{validPrice ? `${num(bondValue)} WIF` : '—'}</span> · 10x price
+            Bond required <span className="text-ink">{validPrice ? `${num(bondValue)} WIF` : '–'}</span> · 10x price
           </span>
-          <span>90% operator · 10% burned</span>
+          <span>90% to you · 10% burned</span>
         </div>
 
         <button
