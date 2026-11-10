@@ -365,8 +365,8 @@ export async function verifyV3Hire(
   task: string,
   txHash: Hash,
   payer: string
-): Promise<{ ok: boolean; hireId: bigint | null }> {
-  const miss = { ok: false, hireId: null } as const;
+): Promise<{ ok: boolean; hireId: bigint | null; paid: bigint; burned: bigint }> {
+  const miss = { ok: false, hireId: null, paid: 0n, burned: 0n } as const;
   if (!HIRE_V3_ADDRESS) return miss;
 
   try {
@@ -405,7 +405,7 @@ export async function verifyV3Hire(
     if (burned > 0n && wifMoved(receipt.logs, HIRE_V3_ADDRESS, BURN_ADDRESS) !== burned) return miss;
 
     const args = match.args as { hireId?: bigint };
-    return { ok: true, hireId: args.hireId ?? null };
+    return { ok: true, hireId: args.hireId ?? null, paid, burned };
   } catch {
     return miss;
   }
@@ -417,11 +417,11 @@ export async function claimHirePaymentV3(
   task: string,
   txHash: Hash,
   payer: string
-): Promise<{ ok: boolean; hireId: bigint | null }> {
+): Promise<{ ok: boolean; hireId: bigint | null; paid: bigint; burned: bigint }> {
   const verified = await verifyV3Hire(agentId, task, txHash, payer);
   if (!verified.ok) return verified;
   const claimed = await claimRedemption(redemptionKey('v3', txHash));
-  return claimed ? verified : { ok: false, hireId: null };
+  return claimed ? verified : { ok: false, hireId: null, paid: 0n, burned: 0n };
 }
 
 export async function getBlockTimes(blocks: number[]): Promise<Map<number, number>> {

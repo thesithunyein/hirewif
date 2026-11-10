@@ -66,8 +66,9 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
   const onV3 = Boolean(HIRE_V3_ADDRESS && listing?.active);
   const price = onV3 ? (listing as V3Listing).price : agent.price;
   const amount = parseUnits(String(price), 18);
-  const burn = Math.floor((price * BURN_BPS) / 10000);
-  const toOperator = price - burn;
+  // Exact to 3 decimals, so small prices (4 WIF burns 0.4) do not display as a zero burn.
+  const burn = Math.round((price * BURN_BPS) / 10) / 1000;
+  const toOperator = Math.round((price - burn) * 10000) / 10000;
   const approveTarget = onV3 ? (HIRE_V3_ADDRESS as `0x${string}`) : HIRE_CONTRACT;
 
   const { data: allowance } = useReadContract({
@@ -148,7 +149,8 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ agent: agent.id, task, tx: hash, user: address }),
         });
-        if (response.status === 503 && attempt < 2) {
+        // 409 means another request is still committing this hire; its answer is returned on retry.
+        if ((response.status === 503 || response.status === 409) && attempt < 3) {
           await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
           return requestResult(attempt + 1);
         }

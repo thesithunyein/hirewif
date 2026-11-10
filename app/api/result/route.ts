@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildReport } from '@/lib/report';
-import { claimRedemption } from '@/lib/redemption';
+import { claimRedemption, loadAnswer, releaseRedemption, saveAnswer } from '@/lib/redemption';
 import { redemptionKey, verifyV1Hire, verifyV3Hire } from '@/lib/wif';
-import { commitAnswer } from '@/lib/commit';
+import { commitAnswer, hireClosed, readHire } from '@/lib/commit';
 import { hashResult, signReceipt } from '@/lib/receipt';
 import { HIRE_V3_CONFIGURED } from '@/lib/v3';
 import { agents } from '@/lib/agents';
-import { isAddress, isHash, type Hash } from 'viem';
+import { formatUnits, isAddress, isHash, type Hash } from 'viem';
 
 export const dynamic = 'force-dynamic';
+// Building the answer plus waiting for the commit to be mined can exceed the 10s default.
+export const maxDuration = 60;
 
 const AGENTS = new Set(['monitor', 'data', 'ledger', 'research']);
+
+const UNVERIFIED = 'This hire transaction could not be verified. Pay for the agent first.';
+const EXPIRED =
+  'This hire passed its 10 minute answer deadline without a committed answer, so no answer can be released. The full payment is refundable from the agent bond.';
+
+function wif(amount: bigint): string {
+  return formatUnits(amount, 18);
+}
 
 export async function POST(req: NextRequest) {
   let body: { agent?: string; task?: string; tx?: string; user?: string };
@@ -33,51 +43,90 @@ export async function POST(req: NextRequest) {
   }
 
   const rail: 'v1' | 'v3' = HIRE_V3_CONFIGURED ? 'v3' : 'v1';
+  const key = redemptionKey(rail, tx);
+  const meta = agents.find((item) => item.id === agent);
 
   // 1. Verify the payment, without consuming it yet.
   let hireId: bigint | null = null;
+  let paid = 0n;
+  let burned = 0n;
   if (rail === 'v3') {
     const verified = await verifyV3Hire(agent, task, tx as Hash, user);
-    if (!verified.ok) {
-      return NextResponse.json({ error: 'This hire transaction could not be verified. Pay for the agent first.' }, { status: 402 });
-    }
+    if (!verified.ok || verified.hireId === null) return NextResponse.json({ error: UNVERIFIED }, { status: 402 });
     hireId = verified.hireId;
+    paid = verified.paid;
+    burned = verified.burned;
   } else if (!(await verifyV1Hire(agent, task, tx as Hash, user))) {
-    return NextResponse.json({ error: 'This hire transaction could not be verified. Pay for the agent first.' }, { status: 402 });
+    return NextResponse.json({ error: UNVERIFIED }, { status: 402 });
   }
 
-  // 2. Build the answer. If the sources fail, the payment stays unconsumed so a retry works.
+  // 2. A verified payer asking again gets the answer already delivered for this hire.
+  const delivered = await loadAnswer<Record<string, unknown>>(key);
+  if (delivered) return NextResponse.json({ ...delivered, redelivered: true });
+
+  // 3. On V3, never answer a hire that is refunded or past its deadline: the hirer would
+  //    keep the answer and also take the refund.
+  if (hireId !== null) {
+    try {
+      const state = await readHire(hireId);
+      if (!state) return NextResponse.json({ error: UNVERIFIED }, { status: 402 });
+      if (await hireClosed(state)) {
+        return NextResponse.json({ error: EXPIRED, refundable: !state.refunded, hireId: hireId.toString() }, { status: 410 });
+      }
+    } catch {
+      return NextResponse.json({ error: 'Could not read the hire from Robinhood Chain. Retry in a moment.', retryable: true }, { status: 503 });
+    }
+  }
+
+  // 4. Build the answer. If the sources fail, the payment stays unconsumed so a retry works.
   let report;
   try {
     report = await buildReport(agent, task);
   } catch {
     return NextResponse.json(
-      {
-        error: 'The live sources did not answer. Nothing was consumed - retry in a moment.',
-        retryable: true,
-        refundable: rail === 'v3',
-      },
+      { error: 'The live sources did not answer. Nothing was consumed - retry in a moment.', retryable: true, refundable: rail === 'v3' },
       { status: 503 }
     );
   }
 
-  // 3. Consume the hire exactly once. If storage is down, serving a paying buyer beats
-  //    stranding their payment, so the answer is still returned and flagged.
+  // 5. Consume the hire exactly once. On V1, if storage is down, serving a paying buyer beats
+  //    stranding their payment. On V3 the onchain commit is the second lock.
   let claimed = true;
   try {
-    claimed = await claimRedemption(redemptionKey(rail, tx));
+    claimed = await claimRedemption(key);
   } catch {
     claimed = true;
   }
   if (!claimed) {
-    return NextResponse.json({ error: 'This hire transaction was already used for an answer.', retryable: false }, { status: 409 });
+    return rail === 'v3'
+      ? NextResponse.json({ error: 'This hire is being answered by another request. Retry in a few seconds.', retryable: true }, { status: 409 })
+      : NextResponse.json({ error: 'This hire transaction was already used for an answer.', retryable: false }, { status: 409 });
   }
 
-  // 4. Record the answer hash so the bond can only be reclaimed when nothing was delivered.
-  const committed = hireId !== null ? await commitAnswer(hireId, report.result) : false;
+  // 6. V3: the answer is released only once its hash is mined onchain.
+  let commitTx: Hash | null = null;
+  if (hireId !== null) {
+    const outcome = await commitAnswer(hireId, report.result);
+    if (outcome.status === 'expired') {
+      return NextResponse.json({ error: EXPIRED, refundable: true, hireId: hireId.toString() }, { status: 410 });
+    }
+    if (outcome.status === 'failed') {
+      await releaseRedemption(key).catch(() => undefined);
+      return NextResponse.json(
+        {
+          error: 'The answer could not be committed onchain, so it was not released. Your payment is safe: retry, or reclaim it from the bond after the deadline.',
+          retryable: true,
+          refundable: true,
+        },
+        { status: 503 }
+      );
+    }
+    commitTx = outcome.tx;
+  }
 
-  const meta = agents.find((item) => item.id === agent);
-  const burn = meta ? Math.floor((meta.price * 1000) / 10000) : 0;
+  const price = rail === 'v3' ? paid : null;
+  const burn = rail === 'v3' ? burned : null;
+  const v1Burn = meta ? Math.floor((meta.price * 1000) / 10000) : 0;
 
   const receipt = signReceipt({
     v: 1,
@@ -86,12 +135,22 @@ export async function POST(req: NextRequest) {
     task,
     result: report.result,
     resultHash: hashResult(report.result),
-    price: String(meta?.price ?? ''),
-    burn: String(burn),
-    operator: String(meta ? meta.price - burn : ''),
+    price: price !== null ? wif(price) : String(meta?.price ?? ''),
+    burn: burn !== null ? wif(burn) : String(v1Burn),
+    operator: price !== null && burn !== null ? wif(price - burn) : String(meta ? meta.price - v1Burn : ''),
     tx,
     at: new Date().toISOString(),
   });
 
-  return NextResponse.json({ ...report, committed, rail, receipt, receiptVerified: receipt !== null });
+  const payload = {
+    ...report,
+    committed: hireId !== null,
+    commitTx,
+    hireId: hireId?.toString() ?? null,
+    rail,
+    receipt,
+    receiptVerified: receipt !== null,
+  };
+  await saveAnswer(key, payload);
+  return NextResponse.json(payload);
 }
