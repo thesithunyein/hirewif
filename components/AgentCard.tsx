@@ -4,9 +4,14 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadCont
 import { WIF_ADDRESS, WIF_ABI, robinhood } from '@/lib/chain';
 import { HIRE_CONTRACT, BURN_BPS, HIRE_CONTRACT_VERSION } from '@/lib/config';
 import { HIRE_V3_ABI, HIRE_V3_ADDRESS, taskHashFor } from '@/lib/v3';
-import { keccak256, parseUnits, toBytes } from 'viem';
+import { keccak256, parseAbiItem, parseEventLogs, parseUnits, toBytes } from 'viem';
 import { Icon } from './Icon';
+import { HireStatus } from './HireStatus';
 import { useState, useEffect } from 'react';
+
+const HIRED_V3 = parseAbiItem(
+  'event Hired(uint256 indexed hireId, bytes32 indexed agentId, address indexed hirer, uint256 paid, uint256 burned, bytes32 taskHash, uint256 nonce)'
+);
 
 const HIRE_ABI = [
   {
@@ -52,7 +57,7 @@ export type V3Listing = { key: `0x${string}`; price: number; bond: number; activ
 export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listing }) {
   const { isConnected, address } = useAccount();
   const { writeContract, data: hash, isPending, error: writeError, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { data: receipt, isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
   const [task, setTask] = useState('');
   const [result, setResult] = useState('');
   const [loadingResult, setLoadingResult] = useState(false);
@@ -61,6 +66,8 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
   const [step, setStep] = useState<'idle' | 'approving' | 'hiring' | 'done'>('idle');
   const [intent, setIntent] = useState<{ taskHash: `0x${string}`; nonce: bigint } | null>(null);
   const [committed, setCommitted] = useState<boolean | null>(null);
+  const [hireId, setHireId] = useState<bigint | null>(null);
+  const [failed, setFailed] = useState(false);
 
   // On V3 the price comes from the registry and the payment is bound to the question.
   const onV3 = Boolean(HIRE_V3_ADDRESS && listing?.active);
@@ -133,14 +140,9 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
     startHire();
   };
 
-  useEffect(() => {
-    if (!isSuccess) return;
-    if (step === 'approving') {
-      setStep('hiring');
-      reset();
-      startHire();
-    } else if (step === 'hiring' && !result && !loadingResult) {
-      setStep('done');
+  const fetchAnswer = () => {
+      setFailed(false);
+      setResult('');
       setLoadingResult(true);
       // A 503 means the payment was not consumed, so retrying is safe and protects the buyer.
       const requestResult = async (attempt = 0): Promise<Response> => {
@@ -193,8 +195,27 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
           const prev = JSON.parse(localStorage.getItem('hirewif-history') || '[]');
           localStorage.setItem('hirewif-history', JSON.stringify([entry, ...prev].slice(0, 20)));
         })
-        .catch((e: Error) => setResult(`Payment went through, but the result failed: ${e.message}`))
+        .catch((e: Error) => {
+          setFailed(true);
+          setResult(`Payment went through, but the answer was not delivered: ${e.message}`);
+        })
         .finally(() => setLoadingResult(false));
+  };
+
+  useEffect(() => {
+    if (!isSuccess) return;
+    if (step === 'approving') {
+      setStep('hiring');
+      reset();
+      startHire();
+    } else if (step === 'hiring' && !result && !loadingResult) {
+      setStep('done');
+      if (onV3 && receipt) {
+        const [event] = parseEventLogs({ abi: [HIRED_V3], logs: receipt.logs, strict: false });
+        const id = (event?.args as { hireId?: bigint } | undefined)?.hireId;
+        if (typeof id === 'bigint') setHireId(id);
+      }
+      fetchAnswer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, step]);
@@ -293,7 +314,25 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
               </a>
             )}
           </div>
-          {committed === true && <div className="text-muted">Answer hash committed onchain.</div>}
+          {hireId !== null ? (
+            <>
+              <HireStatus hireId={hireId} />
+              <a href={`/hire/${hireId}`} className="block text-muted underline underline-offset-4">
+                Hire #{hireId.toString()} status page
+              </a>
+            </>
+          ) : (
+            committed === true && <div className="text-muted">Answer hash committed onchain.</div>
+          )}
+          {failed && !loadingResult && (
+            <button
+              type="button"
+              onClick={fetchAnswer}
+              className="min-h-10 text-left text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+            >
+              Try getting the answer again
+            </button>
+          )}
           {loadingResult && <div className="text-muted">Getting your answer…</div>}
           {result && (
             <>
@@ -304,6 +343,7 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
                 </summary>
                 <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-ink bg-soft p-3 rounded">{result}</pre>
               </details>
+              {!failed && (
               <button
                 type="button"
                 onClick={shareResult}
@@ -311,6 +351,7 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
               >
                 {shared ? 'Copied' : 'Share answer'}
               </button>
+              )}
               {reportUrl && (
                 <a
                   href={reportUrl}
