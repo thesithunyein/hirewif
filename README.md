@@ -1,254 +1,130 @@
 <p align="center">
-  <img src="docs/logo.png" alt="HireWif" width="180" />
+  <img src="docs/logo.png" alt="HireWif" width="160" />
 </p>
 
 <h1 align="center">HireWif</h1>
 
 <p align="center">
-  Pay agents in $WIF for answers read straight off Robinhood Chain. 10% of every hire is burned.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/chain-Robinhood%20Chain-black" alt="Chain" />
-  <img src="https://img.shields.io/badge/token-%24WIF-black" alt="Token" />
-  <img src="https://img.shields.io/badge/license-MIT-black" alt="License" />
-  <img src="https://img.shields.io/badge/status-live-black" alt="Status" />
+  <b>Answered, or paid back.</b><br />
+  A bonded agent market on Robinhood Chain. Pay a few $WIF for an answer. No answer in 10 minutes? The agent's bond pays you back.
 </p>
 
 <p align="center">
   <a href="https://www.hirewif.tech">Live site</a> ·
-  <a href="https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31">Bonded market (V3)</a> ·
-  <a href="https://github.com/thesithunyein/hirewif">GitHub</a>
+  <a href="https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31">Contract (verified)</a> ·
+  <a href="https://www.hirewif.tech/stats">Live numbers</a>
 </p>
-
----
 
 <p align="center">
-  <img src="docs/homepage.png" alt="HireWif homepage: Ask the chain." width="100%" />
+  <img src="https://img.shields.io/badge/chain-Robinhood%20Chain%204663-black" alt="Chain" />
+  <img src="https://img.shields.io/badge/token-%24WIF-black" alt="Token" />
+  <img src="https://img.shields.io/badge/tests-31%20passing-black" alt="Tests" />
+  <img src="https://img.shields.io/badge/license-MIT-black" alt="License" />
 </p>
 
-## Problem
+<p align="center">
+  <img src="docs/homepage.png" alt="HireWif homepage: Answered, or paid back." width="100%" />
+</p>
 
-Agent tools either answer from a language model with no data behind it, or they mock the payment. Neither is a market. HireWif does the opposite on both counts: the answer is read from live chain and market data, and the payment is a real $WIF transfer that anyone can audit.
+## Why
 
-## Live proof
+Paying an agent today means trusting it. If it takes your money and never answers, you lose.
 
-The deployed flow has been exercised with the Monitor agent at its listed price:
-
-| Result | Verified value |
-|---|---|
-| Agent | Monitor |
-| Hire payment | 250 WIF |
-| Burned | 25 WIF |
-| Operator payout | 225 WIF |
-| Marketplace totals | 1 hire · 250 WIF paid · 25 WIF burned |
-
-The payment and split are auditable in this [successful hire transaction](https://robinhoodchain.blockscout.com/tx/0x0aed9c531acc7da395e8e8146d4e3635ba0cd9bd88e16ad947f288661bd4d73a). The Monitor answer is returned from the live data path rather than generated from a model.
-
-## What you get
-
-Each agent answers with numbers and names the source. No model writes the answer, so it cannot invent one. If a source is down the answer says so instead of estimating.
-
-| Agent | Price | What it returns |
-|---|---|---|
-| Monitor | 4 WIF | Price, market cap, liquidity, 24h volume and buy/sell counts from DexScreener, plus the largest WIF transfers onchain |
-| Ledger | 8 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which agents were hired |
-| Data | 12 WIF | Supply, burn-address balance, and transfer flow computed from the last 200,000 blocks of WIF logs |
-| Research | 20 WIF | Market, supply and hire data in one brief, with every number tied to its source |
-
-Data sources: DexScreener for market data, `eth_getLogs` and `eth_call` against `rpc.mainnet.chain.robinhood.com` for chain data. No paid API.
+HireWif makes the agent put money up first. Every agent locks a $WIF bond worth 10x its price. When you hire one, your full payment is held from that bond until the answer is recorded onchain. If it misses the 10 minute deadline, you take your payment back from the bond. The contract enforces this, not the site.
 
 ## How it works
 
+1. **Agents put up WIF.** Listing an agent locks a bond of at least 10x its price.
+2. **You ask.** You pay the listed price in WIF. The same amount is reserved from the agent's bond.
+3. **Answered or paid back.** The server builds the answer from live data and records its hash onchain before showing it. No answer in 10 minutes? Click **Get WIF back** and the bond pays you in full.
+
+Every hire splits 90% to the agent and burns 10% to `0x…dEaD`.
+
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant C as HireWif Contract
-    participant O as Operator
-    participant B as Burn
-
-    U->>C: approve WIF
-    U->>C: hire(agent, amount)
-    C->>O: 90%
-    C->>B: 10%
-    C-->>U: Hired event
-    U->>U: result built from live data
+    participant U as Hirer
+    participant C as HireWifV3
+    participant S as Agent server
+    U->>C: hire(agent, question hash, nonce, maxPrice)
+    C->>C: reserve price from bond, burn 10%
+    U->>S: ask for the answer
+    S->>C: commit(hireId, answer hash)
+    C->>C: release reserve
+    S-->>U: answer
+    Note over U,C: No commit in 10 min:<br/>anyone calls claimRefund,<br/>hirer is paid from the bond
 ```
 
-1. Connect a wallet on Robinhood Chain (4663).
-2. Pick an agent and describe the task.
-3. Approve and hire. The contract splits the payment and writes a `Hired` event.
-4. The server verifies the successful hire transaction, payer, agent, exact listed price, and 10% burn before building the answer from live data.
-5. Share the report with its live sources and transaction receipt to bring the next user back to the marketplace.
+## Live proof
 
-The price is set by the site in `lib/agents.ts`. The deployed contract accepts any amount and does not check it against a registry, so the amount is the client's choice rather than an onchain constraint. Anyone reading the page can send any amount through the contract directly.
-
-Hire counts and WIF totals on the site are read from the `Hired` event log, not from browser storage. Local storage only holds your own history.
-
-The result endpoint is payment-gated: an unpaid request is rejected, and a confirmed transaction can only be redeemed once by the running server. The current contract predates task hashes, so the question is not yet recorded onchain; a production multi-instance deployment should move redemption records to durable storage and a future contract version should include a task hash and nonce.
-
-For multi-instance production, configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The result service uses an atomic Redis claim so the same hire cannot be redeemed twice across server instances. Without those variables, production redemption fails closed unless `ALLOW_EPHEMERAL_REDEMPTIONS=true` is explicitly set for a temporary single-instance deployment.
-
-To activate the task-bound V2 contract after deployment, set `NEXT_PUBLIC_HIRE_CONTRACT` to its address and `NEXT_PUBLIC_HIRE_CONTRACT_VERSION=2` in the hosting environment, then redeploy the app. Until both variables are set, the app intentionally continues using the audited V1 address.
-
-When Redis is configured, the marketplace also records wallet-scoped WIF watches, pulse history, and deduplicated report shares. The activity panel exposes returning-wallet and shared-report counts as durable flywheel evidence; it stays blank rather than fabricating a metric when Redis is unavailable.
-
-## Pricing and payouts
-
-Four agents. On the bonded V3 market the price is set in the registry and enforced by the contract; these are the listed prices:
-
-| Agent | Price |
-|---|---|
-| Monitor | 4 WIF |
-| Ledger | 8 WIF |
-| Data | 12 WIF |
-| Research | 20 WIF |
-
-Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the constructor. There is no third-party payee on the deployed contract.
-
-## Operator registry (V3)
-
-`contracts/HireWifV3.sol` turns the single-operator rail into a market.
-
-- `register(agentId, price, payout, bond)` — any wallet can list an agent. The contract pulls a WIF bond of at least 10x the listed price and holds it. An agent id can be registered once, ever.
-- `hire(agentId, taskHash, nonce, maxPrice)` — the price comes from the registry, not from the client, and `maxPrice` makes a price raise between signing and inclusion revert instead of overcharging. 90% accrues to the agent's payout, 10% is burned. A nonce per wallet blocks replays. The full price is **reserved out of the bond** for as long as the hire is open, and a hire is rejected if the free bond cannot cover it.
-- `commit(hireId, answerHash)` — the operator has `COMMIT_WINDOW` (10 minutes) to record a non-zero answer hash. Committing releases the reserve.
-- `claimRefund(hireId)` — after the deadline with nothing committed, **anyone** can trigger the refund; the full payment always goes to the hirer, paid from the reserved bond.
-- `withdrawEarnings()` / `closeAgent(agentId)` — operators pull their 90%, and recover the bond only when no hire is open.
-
-Why the reserve matters: without it an operator could skip the answer, wait out the window, and close the agent or shrink its bond before the hirer claimed. In V3 the bond backing an open hire cannot leave the contract until that hire is committed or refunded, so a refund that is owed can always be paid. `agentReserve(agentId)` exposes the reserved amount and open hire count.
-
-There is still no owner, pause, upgrade or rescue path. Earnings are pull-based, so a reverting payout address cannot block hires.
-
-**Deployed on Robinhood Chain (4663):** [`0xadf0244fEE999B019EDc712Ec5345c65C8506c31`](https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31), source verified on Blockscout (exact match, solc 0.8.34, optimizer off). Four agents are listed with 10x bonds, 440 WIF locked in total.
-
-To deploy your own instance and list the agents, import a funded wallet into a Foundry keystore and run the script; it never reads a raw key:
-
-```bash
-cast wallet import hirewif-deployer --interactive
-PAYOUT=0xServerHotWallet DEPLOYER=0xYourWallet ./scripts/deploy-v3.sh
-```
-
-Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement and `maxPrice`, the 90/10 split, the commit deadline, refund-from-bond, permissionless refunds, double refunds, nonce replay, the bond reserve, every operator escape route (closing early, shrinking the bond, reusing a closed id), and a fuzzed solvency check.
-
-## Environment
-
-Copy `.env.example`. Nothing below is required to run the site locally.
-
-| Variable | Purpose |
-|---|---|
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Durable watchlists, report shares and pulse history. Without them those endpoints answer `{"durable": false}` and store nothing. |
-| `ROBINHOOD_RPC` | Override the public Robinhood Chain RPC. |
-| `NEXT_PUBLIC_HIRE_CONTRACT` / `NEXT_PUBLIC_HIRE_CONTRACT_VERSION` | Pin the live hire rail (V1 by default). |
-| `NEXT_PUBLIC_HIRE_V3_CONTRACT` | Address of the deployed operator registry. Listings stay hidden until this is set. |
-
-## Alerts
-
-A saved watch is only worth something if it fires. `/api/alerts/run` reads every saved watch
-from Redis, compares the live 24h move against each threshold, and delivers at most one alert
-per wallet per 6 hours.
-
-Vercel's Hobby plan rejects any cron that runs more than once a day, and a rejected cron fails
-the **entire deployment** rather than just the schedule. `vercel.json` therefore schedules one
-daily run at 00:00 UTC. For a tighter loop on Hobby, point an external scheduler (cron-job.org,
-a GitHub Action, any uptime pinger) at `/api/alerts/run?key=$CRON_SECRET` every 15 minutes; Pro
-can use `*/15 * * * *` in `vercel.json` instead. Never put a sub-daily schedule in `vercel.json`
-while the project is on Hobby: it silently freezes the site on its last good build.
-
-Delivery order: Knock when `KNOCK_API_KEY` and a recipient email are present, then a plain
-`ALERT_WEBHOOK_URL` (Discord/Slack style) so the loop can be demonstrated without a vendor
-account. The route refuses to run without `CRON_SECRET`, so it cannot be used to message
-people. Nothing is marked as delivered unless a provider accepted it.
-
-## What verification checks
-
-Before an answer is built, the server reads the hire transaction and checks independently:
-
-- the transaction succeeded and was sent to the HireWif contract by the payer's wallet;
-- the contract's `Hired` event names the requested agent and the listed price;
-- the WIF `Transfer` logs move exactly that price from the payer to the contract;
-- the burn share reaches `0x…dEaD`, and the remainder reaches the operator (V1) or accrues
-  to the operator's withdrawable earnings (V3);
-- the hire has not already been answered, via a one-time key in Redis.
-
-On V3 the question is bound as well: the event's task hash must match the task being answered,
-which V1 cannot enforce. None of this proves an answer is factually correct, and `/report`
-says exactly that rather than implying otherwise.
-
-## Receipts and stats
-
-A paid answer can be shared as a public receipt. The server signs the payload with
-`RECEIPT_SECRET` (HMAC-SHA256) and the link carries only that token, so the payment figures
-cannot be edited by whoever holds the URL. Links built from query parameters still render,
-but `/report` labels them **unverified** instead of presenting them as proof.
-
-`/stats` is the public, auditable view: hires, WIF paid and burned, unique and returning
-wallets, registry bonds and slashes, plus direct explorer links for every address. Numbers
-come from chain logs, and a failed read stays blank rather than showing a guess.
-
-RPC reads are chunked and time-boxed. A hire is verified before the answer is built and the
-payment is only consumed after a successful build, so a source outage returns a retryable
-503 instead of eating a paid request.
-
-## Stack
-
-- Next.js 14 (App Router, TypeScript)
-- Tailwind CSS
-- wagmi + viem
-- Solidity 0.8.34, Foundry for tests
-
-## Project structure
-
-```
-hirewif/
-├── app/
-│   ├── api/agents/route.ts    # Agent list + per-agent hire totals
-│   ├── api/result/route.ts    # Builds the answer from live data
-│   ├── api/stats/route.ts     # Counters read from Hired events
-│   ├── marketplace/page.tsx   # Agent marketplace
-│   ├── page.tsx               # Landing
-│   └── layout.tsx
-├── components/
-│   ├── Activity.tsx           # Onchain counters + latest hires
-│   ├── AgentCard.tsx          # Approve, hire, result
-│   ├── AgentDirectory.tsx     # Live directory
-│   ├── ConnectButton.tsx
-│   └── History.tsx            # Your own hires
-├── contracts/
-│   └── HireWif.sol            # Deployed contract: 90/10 split, no registry
-├── lib/
-│   ├── agents.ts              # Agent catalog and prices
-│   ├── chain.ts
-│   ├── config.ts              # Contract address, operator
-│   ├── report.ts              # Answer builder
-│   └── wif.ts                 # DexScreener + RPC reads
-├── scripts/
-│   └── seed.mjs               # Seeds hires against the deployed contract
-├── test/
-│   └── HireWif.t.sol          # 8 Foundry tests
-└── README.md
-```
-
-## Contract
+All on Robinhood Chain mainnet.
 
 | | |
 |---|---|
-| Address | `0x423B8701Da3a251a3A3fc2d241b71e8d05744C91` |
-| Chain | Robinhood Chain (4663) |
-| Token | $WIF `0x5173b8eA6923c2d40267890D45C46a3480954773` |
-| Split | 90% operator / 10% burn |
-| Events | `Hired` |
-| Compiler | solc 0.8.34, optimizer off |
+| Contract | [`0xadf0244fEE999B019EDc712Ec5345c65C8506c31`](https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31), source verified (exact match) |
+| Bonds locked | 440 WIF across 4 agents |
+| Answered hire | [Hire #1](https://www.hirewif.tech/hire/1): paid 4 WIF, answer committed in [`0x7ef5c3bf…`](https://robinhoodchain.blockscout.com/tx/0x7ef5c3bfa0d22106b05d8c078aa1384ec9fef0485fbad0c2e25020dd15a11455) |
+| Refund | [Hire #2](https://www.hirewif.tech/hire/2): hired straight through the contract with no server, so it missed its deadline and the hirer takes it back from the Monitor bond (live status on the page) |
 
-Source: `contracts/HireWif.sol`
+Every number on [hirewif.tech/stats](https://www.hirewif.tech/stats) is read from the chain. If a source is down, it stays blank instead of guessing.
 
-```solidity
-function hire(string calldata agent, uint256 amount) external;
+## Agents
+
+| Agent | Price | Bond | Answers with |
+|---|---|---|---|
+| Monitor | 4 WIF | 40 WIF | Price, volume, liquidity and big transfers |
+| Ledger | 8 WIF | 80 WIF | Hires, payments and burns on HireWif |
+| Data | 12 WIF | 120 WIF | Supply, burns and transfer flow |
+| Research | 20 WIF | 200 WIF | All of the above, with risks and sources |
+
+Answers come from DexScreener and direct `eth_call` / `eth_getLogs` reads on Robinhood Chain. No language model writes them, so they cannot invent numbers. If a source fails, the answer says so.
+
+Anyone can list their own agent at [hirewif.tech/operators](https://www.hirewif.tech/operators).
+
+## Why $WIF, and why people come back
+
+$WIF is not a payment option bolted on. It is the price, the bond and the penalty:
+
+- **Payment.** Every hire is a WIF transfer.
+- **Bond.** Agents lock 10x their price in WIF to be listed.
+- **Penalty.** A missed deadline pays the hirer out of that bond.
+- **Burn.** 10% of every hire is burned for good.
+
+The loop: more agents lock more WIF, and more hires burn more WIF. Answers come with a share link, and Follow WIF sends a price alert that brings the hirer back.
+
+## Contract
+
+`contracts/HireWifV3.sol`. No owner, no pause, no upgrade, no rescue.
+
+| Function | What it does |
+|---|---|
+| `register(agentId, price, payout, bond)` | List an agent. Bond must be at least 10x the price. An id can be used once, ever. |
+| `hire(agentId, taskHash, nonce, maxPrice)` | Pay the listed price. Reserves the same amount from the bond, burns 10%, accrues 90% to the agent. Reverts if the free bond cannot cover it or the price rose above `maxPrice`. |
+| `commit(hireId, answerHash)` | Agent only, before the deadline. Records the answer hash and releases the reserve. |
+| `claimRefund(hireId)` | After the deadline with no commit. Anyone can call it; the full payment always goes to the hirer. |
+| `withdrawEarnings()` | Agent pulls its 90%. |
+| `closeAgent(agentId)` | Returns the bond, only when no hire is open. |
+| `updateAgent(agentId, price, bond)` | Change price or bond. Bond can never drop below what open hires reserve. |
+
+**The guarantee.** For every agent, bond is always at least the sum of its open hires. An agent cannot close, shrink its bond, or reuse a closed id while a hire is open, so a refund that is owed can always be paid.
+
+**Tests.** 31 Foundry tests, including every operator escape route (closing early, draining the bond, re-registering a closed id, raising the price mid-flight) and a fuzzed solvency check.
+
+```bash
+forge test --match-contract HireWifV3Test -vv
 ```
 
-That is the entire mutating surface: four public members — `WIF()`, `BURN()`, `operator()`, `hire()`. The operator is fixed at deploy and there is no owner, pause, upgrade or withdrawal path.
+## What the server checks
 
-Building this source with solc 0.8.34 and the optimizer off reproduces the deployed runtime bytecode; only the trailing metadata hash differs.
+Before an answer is released, `/api/result` checks on chain that:
+
+- the hire transaction succeeded, was sent by the payer, and hit this contract;
+- the `Hired` event names this agent and the hash of this exact question;
+- the WIF transfers match the price and the 10% burn;
+- the hire is not refunded and not past its deadline.
+
+Then it commits the answer hash and waits for it to be mined. Only then does the hirer see the answer. If the commit fails, nothing is released and the hirer can retry or take the refund. Answers are stored so a hirer whose page closed can fetch the same paid answer again.
+
+The operator key lives only on the server and only signs commits.
 
 ## Run locally
 
@@ -257,50 +133,49 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. Copy `.env.example` to `.env.local`; nothing is required to browse.
 
-Tests:
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_HIRE_V3_CONTRACT` | The bonded market contract |
+| `OPERATOR_PRIVATE_KEY` | Server wallet that commits answers. Use a dedicated hot wallet. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash Redis (the Vercel integration names). `UPSTASH_REDIS_REST_*` also works. |
+| `RECEIPT_SECRET` | Signs shareable receipts |
+| `CRON_SECRET`, `ALERT_WEBHOOK_URL`, `KNOCK_API_KEY` | Price alerts |
+| `ROBINHOOD_RPC` | Override the public RPC |
 
-```bash
-~/foundry/bin/forge test
-```
-
-## Deploy the contract
-
-```bash
-forge create contracts/HireWif.sol:HireWif \
-  --rpc-url https://rpc.mainnet.chain.robinhood.com \
-  --private-key $PK \
-  --constructor-args 0x7a35f63f81357dade2cff8f5699b935786aa9da2
-```
-
-Then put the printed address in `lib/config.ts` as `HIRE_CONTRACT`.
-
-## Seed hires
+## Deploy your own
 
 ```bash
-read -rsp "private key: " PK && echo && PK=$PK node scripts/seed.mjs
+cast wallet import hirewif-deployer --interactive
+PAYOUT=0xServerHotWallet DEPLOYER=0xYourWallet ./scripts/deploy-v3.sh
 ```
 
-The script reads the contract address from `lib/config.ts` and prices from `lib/agents.ts`, refuses to run if the wallet is short on WIF, and approves only the exact total.
+The script checks your WIF balance, deploys, approves exactly the bond total, registers the four agents and prints the Vercel settings. It never reads a raw private key.
+
+## Stack
+
+Next.js 14, TypeScript, Tailwind, wagmi + viem, Solidity 0.8.34 with Foundry, Upstash Redis, Vercel.
+
+## Project structure
+
+```
+contracts/HireWifV3.sol      bonded market (live)
+contracts/HireWif.sol        first contract, kept for history
+test/HireWifV3.t.sol         31 tests
+app/api/result/route.ts      verify, build, commit, release
+app/hire/[id]/page.tsx       live status and refund for any hire
+components/AgentCard.tsx     approve, hire, answer
+components/HireStatus.tsx    committed / countdown / refund
+lib/commit.ts                server-side answer commits
+lib/report.ts                answer builder
+scripts/deploy-v3.sh         deploy and list agents
+```
 
 ## Security
 
-- The deployed V1 contract is 30 lines. No owner, pause, upgrade, rescue or withdrawal function.
-- The operator address is fixed by the constructor and cannot be changed afterwards.
-- The burn address is a constant, so the 10% cannot be redirected.
-- Approvals are for the exact hire amount. Users keep custody of their $WIF.
-- The server never handles keys.
-- The result API verifies the mainnet receipt, contract, payer, agent, price, and burn before returning an answer.
-- Each verified transaction is redeemed once by the result service; durable shared storage is required before scaling across multiple server instances.
-- `contracts/HireWifV2.sol` defines the next contract shape with an onchain task hash and nonce; it is not the address currently deployed in `lib/config.ts`.
-- Raw blockchain and market data are public by design, but the paid answer endpoint does not return a report without a verified hire.
-- See [SECURITY.md](SECURITY.md) for reporting.
+See [SECURITY.md](SECURITY.md). The first contract, `0x423B8701Da3a251a3A3fc2d241b71e8d05744C91`, stays onchain and its hires still count in the stats.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
-
-## Contributing
-
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+MIT. HireWif is independent and not affiliated with Robinhood Markets, Inc.
