@@ -157,8 +157,8 @@ export function Pulse() {
               <div className="mt-1 font-mono text-sm tabular-nums">{data.flow?.transfers.toLocaleString('en-US') ?? '–'}</div>
             </div>
             <div>
-              <div className="text-xs text-muted">Repeat wallets</div>
-              <div className="mt-1 font-mono text-sm tabular-nums">{data.hires?.repeatUsers ?? 0}</div>
+              <div className="text-xs text-muted">Liquidity</div>
+              <div className="mt-1 font-mono text-sm tabular-nums">{data.market ? `$${Math.round(data.market.liquidityUsd).toLocaleString('en-US')}` : '–'}</div>
             </div>
           </div>
           {data.signals.length > 0 && (

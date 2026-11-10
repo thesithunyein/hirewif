@@ -28,7 +28,8 @@ export async function GET() {
     signals.push(`${flow.largest[0].value.toLocaleString('en-US', { maximumFractionDigits: 0 })} WIF moved in the largest recent transfer.`);
   }
   if (hires?.recent[0]) {
-    signals.push(`${hires.recent[0].agent} was the latest paid agent hire.`);
+    const name = hires.recent[0].agent;
+    signals.push(`Last agent hired: ${name.charAt(0).toUpperCase()}${name.slice(1)}.`);
   }
 
   return NextResponse.json(
