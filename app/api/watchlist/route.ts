@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { getWatch, removeWatch, saveWatch } from '@/lib/watchlist';
+import { redisUrl } from '@/lib/redis-env';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,7 +18,7 @@ function notDurable() {
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get('address') ?? '';
   if (!isAddress(address)) return NextResponse.json({ error: 'Valid wallet address required' }, { status: 400 });
-  if (!process.env.UPSTASH_REDIS_REST_URL) return notDurable();
+  if (!redisUrl()) return notDurable();
   const watch = await getWatch(address);
   return NextResponse.json({ watch, durable: true }, { headers: { 'Cache-Control': 'no-store' } });
 }
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: 'That email address does not look valid' }, { status: 400 });
   }
-  if (!process.env.UPSTASH_REDIS_REST_URL) return notDurable();
+  if (!redisUrl()) return notDurable();
   const watch = await saveWatch(address, threshold, email);
   if (!watch) return notDurable();
   return NextResponse.json({ watch, durable: true }, { headers: { 'Cache-Control': 'no-store' } });
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const address = req.nextUrl.searchParams.get('address') ?? '';
   if (!isAddress(address)) return NextResponse.json({ error: 'Valid wallet address required' }, { status: 400 });
-  if (!process.env.UPSTASH_REDIS_REST_URL) return notDurable();
+  if (!redisUrl()) return notDurable();
   await removeWatch(address);
   return NextResponse.json({ ok: true, durable: true }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMarket } from '@/lib/wif';
 import { claimAlertSlot, listWatches } from '@/lib/watchlist';
 import { deliverAlert } from '@/lib/notify';
+import { redisUrl } from '@/lib/redis-env';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -22,7 +23,7 @@ function authorised(req: NextRequest): boolean {
  * Refuses to run without CRON_SECRET so it can never be used to spam recipients.
  */
 export async function GET(req: NextRequest) {
-  if (!process.env.UPSTASH_REDIS_REST_URL) {
+  if (!redisUrl()) {
     return NextResponse.json({ durable: false, checked: 0, matched: 0, sent: 0 }, { headers: noStore });
   }
   if (!authorised(req)) {
