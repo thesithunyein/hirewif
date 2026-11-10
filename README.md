@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://www.hirewif.tech">Live site</a> ·
-  <a href="https://robinhoodchain.blockscout.com/address/0x423B8701Da3a251a3A3fc2d241b71e8d05744C91">Contract</a> ·
+  <a href="https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31">Bonded market (V3)</a> ·
   <a href="https://github.com/thesithunyein/hirewif">GitHub</a>
 </p>
 
@@ -120,12 +120,13 @@ Why the reserve matters: without it an operator could skip the answer, wait out 
 
 There is still no owner, pause, upgrade or rescue path. Earnings are pull-based, so a reverting payout address cannot block hires.
 
-V3 is not deployed by this repo yet, and the live site keeps using V1 until `NEXT_PUBLIC_HIRE_V3_CONTRACT` is set. Deploy and then point the site at it:
+**Deployed on Robinhood Chain (4663):** [`0xadf0244fEE999B019EDc712Ec5345c65C8506c31`](https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31), source verified on Blockscout (exact match, solc 0.8.34, optimizer off). Four agents are listed with 10x bonds, 440 WIF locked in total.
+
+To deploy your own instance and list the agents, import a funded wallet into a Foundry keystore and run the script; it never reads a raw key:
 
 ```bash
-forge create contracts/HireWifV3.sol:HireWifV3 \
-  --rpc-url https://rpc.mainnet.chain.robinhood.com \
-  --private-key $PK
+cast wallet import hirewif-deployer --interactive
+PAYOUT=0xServerHotWallet DEPLOYER=0xYourWallet ./scripts/deploy-v3.sh
 ```
 
 Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement and `maxPrice`, the 90/10 split, the commit deadline, refund-from-bond, permissionless refunds, double refunds, nonce replay, the bond reserve, every operator escape route (closing early, shrinking the bond, reusing a closed id), and a fuzzed solvency check.
