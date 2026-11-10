@@ -42,7 +42,10 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   }, [refunded, refetch]);
 
   if (!data || !HIRE_V3_ADDRESS) return null;
-  const [, , paid, deadline, isCommitted, isRefunded, answerHash] = data;
+  const [, hirer, paid, deadline, isCommitted, isRefunded, answerHash] = data;
+  if (/^0x0{40}$/i.test(hirer)) {
+    return <div className="text-muted">No hire #{hireId.toString()} exists on the contract yet.</div>;
+  }
   const amount = Number(formatUnits(paid, 18)).toLocaleString('en-US');
   // The contract compares against block time; a few seconds of slack avoids a reverting claim.
   const left = Number(deadline) + 5 - now;
