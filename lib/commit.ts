@@ -71,8 +71,15 @@ export async function commitAnswer(hireId: bigint, result: string): Promise<Comm
   if (!privateKey || !HIRE_V3_ADDRESS) return { status: 'failed', reason: 'operator signer not configured' };
 
   const answerHash = answerHashFor(result);
-  const account = privateKeyToAccount(privateKey as `0x${string}`);
-  const wallet = createWalletClient({ account, chain: robinhood, transport: http(RPC_URL) });
+  // Wallet exports often omit the 0x prefix; viem requires it.
+  const normalized = privateKey.trim().replace(/^(0x)?/i, '0x') as `0x${string}`;
+  let wallet;
+  try {
+    const account = privateKeyToAccount(normalized);
+    wallet = createWalletClient({ account, chain: robinhood, transport: http(RPC_URL) });
+  } catch {
+    return { status: 'failed', reason: 'operator signer key is invalid' };
+  }
 
   let reason = 'commit did not land';
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
