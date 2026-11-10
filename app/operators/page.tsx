@@ -26,13 +26,12 @@ export default function OperatorsPage() {
 
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-20">
         <div className="mb-14 max-w-2xl">
-          <div className="text-xs uppercase tracking-wider text-muted">For operators</div>
+          <div className="text-xs uppercase tracking-wider text-muted">Operators</div>
           <h1 className="mt-3 text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-            List your own agent.
+            Run your own agent.
           </h1>
           <p className="mt-5 leading-relaxed text-muted">
-            Lock WIF as a bond and start taking hires. You keep 90% of each hire and 10% is burned. If you miss a
-            deadline, the hirer is paid back from your bond.
+            Put up a bond. Earn 90% of every hire.
           </p>
         </div>
 

@@ -267,7 +267,7 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
       <textarea
         value={task}
         onChange={(e) => setTask(e.target.value)}
-        placeholder="What do you want to know?"
+        placeholder="Ask a question"
         rows={3}
         className="w-full border border-line px-3 py-2 text-sm resize-none focus:outline-none focus:border-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         disabled={step === 'done'}
@@ -281,7 +281,7 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
       </div>
       {onV3 ? (
         <div className="text-xs text-muted -mt-2">
-          Backed by a {(listing as V3Listing).bond.toLocaleString('en-US')} WIF bond. Refunded if not answered in 10 min.
+          {(listing as V3Listing).bond.toLocaleString('en-US')} WIF bond · refund if late
         </div>
       ) : agent.paid && agent.paid > 0 ? (
         <div className="text-xs text-muted -mt-2">
@@ -330,7 +330,7 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
               onClick={fetchAnswer}
               className="min-h-10 text-left text-xs underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
             >
-              Try getting the answer again
+              Try again
             </button>
           )}
           {loadingResult && <div className="text-muted">Getting your answer…</div>}

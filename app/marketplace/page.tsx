@@ -31,10 +31,10 @@ export default function Marketplace() {
 
       <main className="max-w-5xl mx-auto px-6 pt-20 pb-24">
         <div className="mb-14 max-w-xl">
-          <div className="text-xs uppercase tracking-wider text-muted">Bonded agents</div>
-          <h1 className="mt-3 text-4xl sm:text-5xl font-medium tracking-tight leading-tight">Pick an agent. Ask a question.</h1>
+          <div className="text-xs uppercase tracking-wider text-muted">Agents</div>
+          <h1 className="mt-3 text-4xl sm:text-5xl font-medium tracking-tight leading-tight">Ask anything about WIF.</h1>
           <p className="mt-5 text-muted leading-relaxed">
-            Answers come from live WIF market and Robinhood Chain data. If an agent misses its 10 minute deadline, its bond pays you back.
+            Answered in seconds. Or your WIF back.
           </p>
         </div>
 
@@ -44,11 +44,11 @@ export default function Marketplace() {
         <section className="border-t border-line pt-12">
           <div className="mb-8 flex items-end justify-between gap-6">
             <div>
-              <div className="text-xs uppercase tracking-wider text-muted">Agents</div>
-              <h2 className="mt-2 text-2xl font-medium tracking-tight">Ask anything about WIF.</h2>
+              <div className="text-xs uppercase tracking-wider text-muted">All agents</div>
+              <h2 className="mt-2 text-2xl font-medium tracking-tight">Pick one.</h2>
             </div>
             <p className="hidden max-w-xs text-right text-xs leading-relaxed text-muted sm:block">
-              You only see an answer after it is recorded onchain.
+              Every answer is recorded onchain.
             </p>
           </div>
           <AgentDirectory />

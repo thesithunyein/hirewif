@@ -53,7 +53,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   if (isCommitted) {
     return (
       <div className="text-muted">
-        Answered. The answer is recorded onchain as{' '}
+        Answered. Recorded onchain:{' '}
         <span className="font-mono">{`${answerHash.slice(0, 10)}…${answerHash.slice(-6)}`}</span>
       </div>
     );
@@ -62,10 +62,10 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   if (isRefunded || refunded) {
     return (
       <div className="text-ink">
-        Refunded. {amount} WIF was paid back from the agent&apos;s bond.{' '}
+        Refunded {amount} WIF.{' '}
         {refundTx && (
           <a href={`${EXPLORER}/tx/${refundTx}`} target="_blank" rel="noreferrer" className="underline">
-            Check refund
+            View
           </a>
         )}
       </div>
@@ -75,7 +75,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   if (left > 0) {
     return (
       <div className="text-muted">
-        Waiting for the answer. If none arrives, you can claim your {amount} WIF back in{' '}
+        Waiting for the answer. Refund opens in{' '}
         <span className="font-mono tabular-nums text-ink">{clock(left)}</span>.
       </div>
     );
@@ -83,7 +83,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-ink">The agent missed its deadline. Your {amount} WIF is waiting in its bond.</div>
+      <div className="text-ink">No answer in time. Your {amount} WIF is ready.</div>
       <button
         type="button"
         onClick={() => {
@@ -99,9 +99,9 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
         disabled={isPending || refunding}
         className="w-full min-h-10 py-2.5 text-sm bg-ink text-paper disabled:opacity-40 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
       >
-        {isPending || refunding ? 'Claiming refund…' : `Claim ${amount} WIF refund`}
+        {isPending || refunding ? 'Refunding…' : `Get ${amount} WIF back`}
       </button>
-      {error && <div role="alert" className="text-red-700">Refund failed. Check your wallet and try again.</div>}
+      {error && <div role="alert" className="text-red-700">Refund failed. Try again.</div>}
     </div>
   );
 }
