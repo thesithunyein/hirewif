@@ -8,6 +8,8 @@ import { HIRE_V3_ADDRESS, agentKeyFor, taskHashFor } from './v3';
 export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as Address;
 const RPC_URL = process.env.ROBINHOOD_RPC ?? 'https://rpc.mainnet.chain.robinhood.com';
 const DEPLOY_BLOCK = 108_500_000n;
+/** HireWifV3 went live at block 110,643,8xx; nothing to read before it. */
+const V3_DEPLOY_BLOCK = 110_640_000n;
 const FLOW_WINDOW = 200_000n;
 const LOG_CHUNK = 50_000n;
 const FLOW_CHUNK = 20_000n;
@@ -84,9 +86,15 @@ const cache = new Map<string, Hit>();
 async function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < ttlMs) return hit.value as T;
-  const value = await fn();
-  cache.set(key, { at: Date.now(), value });
-  return value;
+  try {
+    const value = await fn();
+    cache.set(key, { at: Date.now(), value });
+    return value;
+  } catch (error) {
+    // A slow or failed refresh keeps the last good value instead of blanking the page.
+    if (hit) return hit.value as T;
+    throw error;
+  }
 }
 
 export type Market = {
@@ -260,21 +268,37 @@ export async function getHires(): Promise<Hires> {
       // V3 events carry the agent as keccak256(id); map it back to the catalog id.
       const agentByKey = new Map(agents.map((agent) => [agentKeyFor(agent.id).toLowerCase(), agent.id]));
 
+      const ranges: { fromBlock: bigint; toBlock: bigint }[] = [];
       for (let fromBlock = DEPLOY_BLOCK; fromBlock <= latest; fromBlock += LOG_CHUNK) {
-        const toBlock = fromBlock + LOG_CHUNK - 1n > latest ? latest : fromBlock + LOG_CHUNK - 1n;
-        const [v1, v3] = await Promise.all([
-          withTimeout(
-            client.getLogs({ address: HIRE_CONTRACT, event: HIRED, fromBlock, toBlock, strict: true }),
-            CHUNK_TIMEOUT_MS
-          ),
-          HIRE_V3_ADDRESS
-            ? withTimeout(
-                client.getLogs({ address: HIRE_V3_ADDRESS, event: HIRED_V3, fromBlock, toBlock, strict: true }),
-                CHUNK_TIMEOUT_MS
-              )
-            : Promise.resolve([]),
-        ]);
+        ranges.push({ fromBlock, toBlock: fromBlock + LOG_CHUNK - 1n > latest ? latest : fromBlock + LOG_CHUNK - 1n });
+      }
 
+      // Chunks are read in parallel batches; V3 is only read from its deploy block on.
+      const BATCH = 8;
+      for (let i = 0; i < ranges.length; i += BATCH) {
+        const batch = await Promise.all(
+          ranges.slice(i, i + BATCH).map(({ fromBlock, toBlock }) =>
+            Promise.all([
+              withTimeout(
+                client.getLogs({ address: HIRE_CONTRACT, event: HIRED, fromBlock, toBlock, strict: true }),
+                CHUNK_TIMEOUT_MS
+              ),
+              HIRE_V3_ADDRESS && toBlock >= V3_DEPLOY_BLOCK
+                ? withTimeout(
+                    client.getLogs({
+                      address: HIRE_V3_ADDRESS,
+                      event: HIRED_V3,
+                      fromBlock: fromBlock > V3_DEPLOY_BLOCK ? fromBlock : V3_DEPLOY_BLOCK,
+                      toBlock,
+                      strict: true,
+                    }),
+                    CHUNK_TIMEOUT_MS
+                  )
+                : Promise.resolve([]),
+            ])
+          )
+        );
+        for (const [v1, v3] of batch) {
         for (const log of v1) {
           hires.push({
             user: String(log.args.user),
@@ -295,6 +319,7 @@ export async function getHires(): Promise<Hires> {
             tx: String(log.transactionHash),
             block: Number(log.blockNumber),
           });
+        }
         }
       }
 
