@@ -112,10 +112,10 @@ export function Pulse() {
     <section className="mb-14 border-y border-line py-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="text-xs uppercase tracking-wider text-muted">WIF right now</div>
-          <h2 className="mt-1 text-xl font-medium tracking-tight">What is moving?</h2>
+          <div className="text-xs uppercase tracking-wider text-muted">Live</div>
+          <h2 className="mt-1 text-xl font-medium tracking-tight">WIF right now</h2>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Live WIF numbers. Hire an agent when you want the full picture.
+            Want the full picture? Ask an agent.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -132,7 +132,7 @@ export function Pulse() {
             href="#agent-research"
             className="inline-flex min-h-10 items-center border border-line px-3 text-xs hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
           >
-            Get the full brief
+            Full brief
           </Link>
         </div>
       </div>
@@ -163,7 +163,7 @@ export function Pulse() {
           </div>
           {data.signals.length > 0 && (
             <div className="mt-5 border-t border-line pt-4">
-              <div className="text-xs uppercase tracking-wider text-muted">What stands out</div>
+              <div className="text-xs uppercase tracking-wider text-muted">Highlights</div>
               <ul className="mt-2 space-y-1 text-sm">
                 {data.signals.map((signal) => <li key={signal}>• {signal}</li>)}
               </ul>

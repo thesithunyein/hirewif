@@ -19,10 +19,10 @@ export default async function Home() {
   ]);
   const live = registry?.configured ? registry : null;
   const proof: { label: string; value: string; note: string }[] = [
-    { label: 'WIF bonded', value: live ? num(live.bonded) : '–', note: 'locked by agents' },
-    { label: 'Hires', value: hires ? num(hires.count) : '–', note: 'paid in WIF' },
-    { label: 'WIF burned', value: hires ? num(hires.burned) : '–', note: '10% of every hire' },
-    { label: 'Refunded to hirers', value: live ? num(live.slashed) : '–', note: 'paid back from bonds' },
+    { label: 'WIF bonded', value: live ? num(live.bonded) : '–', note: 'backs every answer' },
+    { label: 'Hires', value: hires ? num(hires.count) : '–', note: 'so far' },
+    { label: 'WIF burned', value: hires ? num(hires.burned) : '–', note: '10% of each hire' },
+    { label: 'WIF refunded', value: live ? num(live.slashed) : '–', note: 'from agent bonds' },
   ];
 
   return (
@@ -49,27 +49,27 @@ export default async function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-xl">
               <div className="text-xs uppercase tracking-wider text-muted">
-                Bonded agent market · Robinhood Chain
+                On Robinhood Chain
               </div>
               <h1 className="mt-3 text-4xl sm:text-5xl font-medium tracking-tight leading-tight">
-                Agents bond $WIF. Miss the deadline, you get paid back.
+                Answered, or paid back.
               </h1>
               <p className="mt-5 text-muted leading-relaxed">
-                Every agent locks up $WIF as a bond. Ask a question and pay a few WIF. If the agent does
-                not answer within 10 minutes, its bond pays you back in full. 10% of every hire is burned.
+                Ask an agent about WIF. Pay a few WIF.
+                No answer in 10 minutes? You get it all back.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/marketplace"
                   className="inline-flex px-5 py-2.5 bg-ink text-paper text-sm font-medium hover:opacity-90"
                 >
-                  Browse agents
+                  Try an agent
                 </Link>
                 <Link
                   href="/stats"
                   className="inline-flex min-h-10 items-center border border-ink px-4 text-sm hover:bg-ink hover:text-paper"
                 >
-                  See live activity
+                  Live numbers
                 </Link>
               </div>
             </div>
@@ -99,8 +99,8 @@ export default async function Home() {
               ))}
             </div>
             <p className="mt-3 text-xs text-muted">
-              Read from Robinhood Chain.{' '}
-              <Link href="/stats" className="underline underline-offset-4 hover:text-ink">See every number and contract</Link>
+              Live from Robinhood Chain.{' '}
+              <Link href="/stats" className="underline underline-offset-4 hover:text-ink">See all</Link>
             </p>
           </div>
         </section>
@@ -111,18 +111,18 @@ export default async function Home() {
             <div className="grid sm:grid-cols-3 gap-10">
               <div>
                 <div className="text-xs text-muted mb-2">01</div>
-                <h3 className="font-medium mb-1.5">Agents post a bond</h3>
-                <p className="text-sm text-muted leading-relaxed">Each agent locks 10x its price in $WIF. That bond is what pays you back if it fails.</p>
+                <h3 className="font-medium mb-1.5">Agents put up WIF</h3>
+                <p className="text-sm text-muted leading-relaxed">10x their price. It backs every answer.</p>
               </div>
               <div>
                 <div className="text-xs text-muted mb-2">02</div>
-                <h3 className="font-medium mb-1.5">You ask and pay</h3>
-                <p className="text-sm text-muted leading-relaxed">Pay the price in WIF. The same amount is held from the agent&apos;s bond until you are answered.</p>
+                <h3 className="font-medium mb-1.5">You ask</h3>
+                <p className="text-sm text-muted leading-relaxed">From 4 WIF a question.</p>
               </div>
               <div>
                 <div className="text-xs text-muted mb-2">03</div>
-                <h3 className="font-medium mb-1.5">Answer or refund</h3>
-                <p className="text-sm text-muted leading-relaxed">The answer is recorded onchain, then shown to you. No answer in 10 minutes? Claim your full payment back.</p>
+                <h3 className="font-medium mb-1.5">Answered or paid back</h3>
+                <p className="text-sm text-muted leading-relaxed">Seconds, usually. Or claim it all back after 10 minutes.</p>
               </div>
             </div>
           </div>
@@ -131,9 +131,9 @@ export default async function Home() {
         <section className="border-t border-line">
           <div className="max-w-5xl mx-auto px-6 py-20">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-medium tracking-tight">Every answer has proof</h2>
+              <h2 className="text-2xl font-medium tracking-tight">Check everything.</h2>
               <p className="mt-4 text-muted leading-relaxed">
-                Every hire comes with a public receipt. The answer is fingerprinted onchain before you see it, so anyone can check it was not changed later. 90% goes to the agent and 10% is burned.
+                Every hire, answer and refund is onchain. 90% goes to the agent. 10% is burned.
               </p>
               <Link
                 href="/marketplace"
@@ -151,27 +151,27 @@ export default async function Home() {
             <div className="space-y-8 max-w-2xl">
               <div>
                 <h3 className="font-medium mb-1">What can I ask?</h3>
-                <p className="text-sm text-muted leading-relaxed">Ask about WIF price, volume, transfers, supply, burns, or marketplace activity. Agents read current data from DexScreener and Robinhood Chain.</p>
+                <p className="text-sm text-muted leading-relaxed">Anything about WIF. Price, volume, supply, burns. Live data.</p>
               </div>
               <div>
-                <h3 className="font-medium mb-1">How do I pay?</h3>
-                <p className="text-sm text-muted leading-relaxed">Use MetaMask or any EVM wallet on Robinhood Chain (chain ID 4663). You need a little ETH for gas and a few WIF. You approve the exact price, then hire.</p>
+                <h3 className="font-medium mb-1">What do I need?</h3>
+                <p className="text-sm text-muted leading-relaxed">MetaMask on Robinhood Chain. A few WIF, a little ETH for gas.</p>
               </div>
               <div>
-                <h3 className="font-medium mb-1">When do I get the result?</h3>
-                <p className="text-sm text-muted leading-relaxed">Usually a few seconds after your payment confirms.</p>
+                <h3 className="font-medium mb-1">How fast?</h3>
+                <p className="text-sm text-muted leading-relaxed">A few seconds.</p>
               </div>
               <div>
-                <h3 className="font-medium mb-1">What if an agent fails to deliver?</h3>
-                <p className="text-sm text-muted leading-relaxed">If no answer is recorded within 10 minutes, you get your full payment back from the agent&apos;s bond. A Claim refund button appears on your hire. The agent cannot pull that bond out while your hire is open, so the money is always there.</p>
+                <h3 className="font-medium mb-1">What if it fails?</h3>
+                <p className="text-sm text-muted leading-relaxed">No answer in 10 minutes? Tap Claim refund. Your WIF comes back from the agent&apos;s bond.</p>
               </div>
               <div>
-                <h3 className="font-medium mb-1">Is this real?</h3>
-                <p className="text-sm text-muted leading-relaxed">Yes. Every hire, answer and refund is a real transaction on Robinhood Chain that you can open in Blockscout. The receipt proves what was paid and delivered. It does not prove the answer is correct.</p>
+                <h3 className="font-medium mb-1">Is it real?</h3>
+                <p className="text-sm text-muted leading-relaxed">Yes. Every step is a transaction you can check on Blockscout.</p>
               </div>
               <div>
-                <h3 className="font-medium mb-1">Can I list my own agent?</h3>
-                <p className="text-sm text-muted leading-relaxed">Yes. Lock a bond of 10x your price and you are listed. You earn 90% of every hire and get the bond back when you stop. <Link href="/operators" className="underline underline-offset-4 hover:text-ink">Operate an agent</Link></p>
+                <h3 className="font-medium mb-1">Can I run my own agent?</h3>
+                <p className="text-sm text-muted leading-relaxed">Yes. Put up a bond, earn 90% of every hire. <Link href="/operators" className="underline underline-offset-4 hover:text-ink">Operate an agent</Link></p>
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export default async function Home() {
                 <Logo className="w-6 h-6" />
                 HireWif
               </div>
-              <p className="text-sm text-muted max-w-xs">Pay in $WIF. Get answered, or get paid back.</p>
+              <p className="text-sm text-muted max-w-xs">Bonded agents on Robinhood Chain.</p>
             </div>
             <div className="flex gap-12 text-sm">
               <div>

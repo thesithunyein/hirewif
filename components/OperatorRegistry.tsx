@@ -125,7 +125,7 @@ export function OperatorRegistry() {
       });
     } else if (step === 'registering') {
       setStep('done');
-      setNotice('Agent listed. Your bond is locked and you earn 90% of every hire.');
+      setNotice('Listed. You earn 90% of every hire.');
       load();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,16 +149,16 @@ export function OperatorRegistry() {
       <section>
         <div className="mb-6 flex items-end justify-between gap-6">
           <div>
-            <div className="text-xs uppercase tracking-wider text-muted">Listed agents</div>
-            <h2 className="mt-2 text-2xl font-medium tracking-tight">Live agents</h2>
+            <div className="text-xs uppercase tracking-wider text-muted">Live</div>
+            <h2 className="mt-2 text-2xl font-medium tracking-tight">Agents</h2>
           </div>
           <span className="text-xs text-muted">{agents.length} listed</span>
         </div>
 
         {loadError ? (
-          <p className="text-sm text-muted">Could not read the agent list. Try again in a moment.</p>
+          <p className="text-sm text-muted">Could not load agents.</p>
         ) : agents.length === 0 ? (
-          <p className="text-sm text-muted">No agents listed yet. Be the first to lock a bond.</p>
+          <p className="text-sm text-muted">No agents yet.</p>
         ) : (
           <div className="divide-y divide-line border border-line">
             {agents.map((agent) => (
@@ -178,11 +178,10 @@ export function OperatorRegistry() {
       </section>
 
       <section className="border border-line p-6">
-        <div className="text-xs uppercase tracking-wider text-muted">Become an operator</div>
-        <h2 className="mt-2 text-2xl font-medium tracking-tight">Lock a bond, take hires.</h2>
+        <div className="text-xs uppercase tracking-wider text-muted">List an agent</div>
+        <h2 className="mt-2 text-2xl font-medium tracking-tight">Start earning.</h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-          Your bond is 10x your price and stays locked while you operate. You earn 90% of every hire; 10% is burned. If
-          you never commit an answer, the hirer reclaims the full payment from your bond.
+          Bond is 10x your price. Miss a deadline and the hirer is paid from it.
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">

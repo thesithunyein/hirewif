@@ -26,10 +26,9 @@ export default function HirePage({ params }: { params: { id: string } }) {
 
       <main className="mx-auto max-w-xl px-6 py-20">
         <div className="text-xs uppercase tracking-wider text-muted">Hire #{params.id}</div>
-        <h1 className="mt-3 text-3xl font-medium tracking-tight">Answered, or refunded.</h1>
+        <h1 className="mt-3 text-3xl font-medium tracking-tight">Answered, or paid back.</h1>
         <p className="mt-4 text-sm leading-relaxed text-muted">
-          Live from the contract. If the agent did not answer within 10 minutes, the wallet that paid can claim the
-          full payment back here.
+          No answer in 10 minutes? Get your WIF back here.
         </p>
         <div className="mt-8 border border-line p-5 text-sm">
           <HireStatus hireId={hireId} />
@@ -40,7 +39,7 @@ export default function HirePage({ params }: { params: { id: string } }) {
           rel="noreferrer"
           className="mt-6 inline-block text-xs text-muted underline underline-offset-4 hover:text-ink"
         >
-          View the contract on Blockscout
+          View contract
         </a>
       </main>
     </div>

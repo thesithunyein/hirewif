@@ -55,19 +55,19 @@ export default async function StatsPage() {
       <main className="mx-auto max-w-5xl px-6 py-16">
         <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-wider text-muted">Public numbers</div>
-          <h1 className="mt-3 text-4xl font-medium tracking-tight">Every number, straight from the chain.</h1>
+          <h1 className="mt-3 text-4xl font-medium tracking-tight">Live numbers.</h1>
           <p className="mt-4 text-muted leading-relaxed">
-            Read live from Robinhood Chain. If a source is down, the number stays blank instead of guessing.
+            Straight from Robinhood Chain.
           </p>
         </div>
 
         <section className="mt-12">
-          <h2 className="text-sm uppercase tracking-wider text-muted">Bonded agent market</h2>
+          <h2 className="text-sm uppercase tracking-wider text-muted">Agents</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {card('Agents listed', registry?.configured ? num(registry.listed) : 'not deployed')}
             {card('Active agents', registry?.configured ? num(registry.active) : '–')}
             {card('WIF bonded', registry?.configured ? num(registry.bonded) : '–', 'locked by agents')}
-            {card('Refunded to hirers', registry?.configured ? num(registry.slashed) : '–', 'paid back from bonds')}
+            {card('WIF refunded', registry?.configured ? num(registry.slashed) : '–', 'from bonds')}
             {card('Hires', registry?.configured ? num(registry.hires) : '–')}
             {card('WIF burned', registry?.configured ? num(registry.burned) : '–')}
           </div>
@@ -87,7 +87,7 @@ export default async function StatsPage() {
         </section>
 
         <section className="mt-12">
-          <h2 className="text-sm uppercase tracking-wider text-muted">All hires, including the first contract</h2>
+          <h2 className="text-sm uppercase tracking-wider text-muted">All hires</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {card('Total hires', hires ? num(hires.count) : '–')}
             {card('WIF paid', hires ? num(hires.paid) : '–')}
@@ -107,12 +107,12 @@ export default async function StatsPage() {
             {card('Liquidity', market ? usd(market.liquidityUsd) : '–')}
             {card('Supply', onchain ? num(onchain.supply) : '–')}
             {card('Held by burn address', onchain ? num(onchain.burned) : '–')}
-            {card('Held by hire contract', onchain ? num(onchain.hireContractBalance) : '–', '0 means nothing is stuck')}
+            {card('Held by hire contract', onchain ? num(onchain.hireContractBalance) : '–', 'should be 0')}
           </div>
         </section>
 
         <section className="mt-12 border-t border-line pt-8">
-          <h2 className="text-sm uppercase tracking-wider text-muted">Verify it yourself</h2>
+          <h2 className="text-sm uppercase tracking-wider text-muted">Contracts</h2>
           <ul className="mt-4 space-y-2 text-sm">
             <li>
               WIF token{' '}
@@ -153,7 +153,7 @@ export default async function StatsPage() {
             </li>
           </ul>
           <p className="mt-6 text-xs leading-relaxed text-muted">
-            Every hire is counted from the contracts' own event logs. Returning wallets are wallets that hired more than once.
+            Counted from the contracts' own logs.
           </p>
         </section>
       </main>
