@@ -55,10 +55,9 @@ export default async function StatsPage() {
       <main className="mx-auto max-w-5xl px-6 py-16">
         <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-wider text-muted">Public numbers</div>
-          <h1 className="mt-3 text-4xl font-medium tracking-tight">Everything the judges can check.</h1>
+          <h1 className="mt-3 text-4xl font-medium tracking-tight">Every number, straight from the chain.</h1>
           <p className="mt-4 text-muted leading-relaxed">
-            Read from Robinhood Chain, not from browser storage. Where a source is missing the value stays blank
-            instead of showing a guess.
+            Read live from Robinhood Chain. If a source is down, the number stays blank instead of guessing.
           </p>
         </div>
 
@@ -66,11 +65,11 @@ export default async function StatsPage() {
           <h2 className="text-sm uppercase tracking-wider text-muted">Bonded agent market</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {card('Agents listed', registry?.configured ? num(registry.listed) : 'not deployed')}
-            {card('Active agents', registry?.configured ? num(registry.active) : '—')}
-            {card('WIF bonded', registry?.configured ? num(registry.bonded) : '—', 'locked by operators')}
-            {card('Refunded to hirers', registry?.configured ? num(registry.slashed) : '—', 'slashed from bonds')}
-            {card('Bonded hires', registry?.configured ? num(registry.hires) : '—')}
-            {card('Burned by bonded hires', registry?.configured ? num(registry.burned) : '—')}
+            {card('Active agents', registry?.configured ? num(registry.active) : '–')}
+            {card('WIF bonded', registry?.configured ? num(registry.bonded) : '–', 'locked by agents')}
+            {card('Refunded to hirers', registry?.configured ? num(registry.slashed) : '–', 'paid back from bonds')}
+            {card('Hires', registry?.configured ? num(registry.hires) : '–')}
+            {card('WIF burned', registry?.configured ? num(registry.burned) : '–')}
           </div>
           {registry?.agents.length ? (
             <div className="mt-4 divide-y divide-line border border-line">
@@ -88,14 +87,14 @@ export default async function StatsPage() {
         </section>
 
         <section className="mt-12">
-          <h2 className="text-sm uppercase tracking-wider text-muted">All hires (V1 and bonded)</h2>
+          <h2 className="text-sm uppercase tracking-wider text-muted">All hires, including the first contract</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {card('Total hires', hires ? num(hires.count) : '—')}
-            {card('WIF paid', hires ? num(hires.paid) : '—')}
-            {card('WIF burned', hires ? num(hires.burned) : '—')}
-            {card('Unique wallets', hires ? num(hires.uniqueUsers) : '—')}
-            {card('Returning wallets', hires ? num(hires.repeatUsers) : '—', hires ? `${repeatRate.toFixed(1)}% of wallets` : undefined)}
-            {card('One-time wallets', hires ? num(repeated) : '—')}
+            {card('Total hires', hires ? num(hires.count) : '–')}
+            {card('WIF paid', hires ? num(hires.paid) : '–')}
+            {card('WIF burned', hires ? num(hires.burned) : '–')}
+            {card('Unique wallets', hires ? num(hires.uniqueUsers) : '–')}
+            {card('Returning wallets', hires ? num(hires.repeatUsers) : '–', hires ? `${repeatRate.toFixed(1)}% of wallets` : undefined)}
+            {card('One-time wallets', hires ? num(repeated) : '–')}
           </div>
           {!hires && <p className="mt-3 text-xs text-muted">Chain read failed, so no hire totals are shown.</p>}
         </section>
@@ -103,12 +102,12 @@ export default async function StatsPage() {
         <section className="mt-12">
           <h2 className="text-sm uppercase tracking-wider text-muted">Market</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {card('WIF price', market ? usd(market.priceUsd) : '—')}
-            {card('24h move', market ? `${market.change24h >= 0 ? '+' : ''}${market.change24h.toFixed(2)}%` : '—')}
-            {card('Liquidity', market ? usd(market.liquidityUsd) : '—')}
-            {card('Supply', onchain ? num(onchain.supply) : '—')}
-            {card('Held by burn address', onchain ? num(onchain.burned) : '—')}
-            {card('Held by hire contract', onchain ? num(onchain.hireContractBalance) : '—', 'should be 0 after settlement')}
+            {card('WIF price', market ? usd(market.priceUsd) : '–')}
+            {card('24h move', market ? `${market.change24h >= 0 ? '+' : ''}${market.change24h.toFixed(2)}%` : '–')}
+            {card('Liquidity', market ? usd(market.liquidityUsd) : '–')}
+            {card('Supply', onchain ? num(onchain.supply) : '–')}
+            {card('Held by burn address', onchain ? num(onchain.burned) : '–')}
+            {card('Held by hire contract', onchain ? num(onchain.hireContractBalance) : '–', '0 means nothing is stuck')}
           </div>
         </section>
 
@@ -127,7 +126,7 @@ export default async function StatsPage() {
               </a>
             </li>
             <li>
-              Legacy hire rail (V1){' '}
+              First contract (V1){' '}
               <a
                 className="font-mono underline underline-offset-4"
                 href={`https://robinhoodchain.blockscout.com/address/${HIRE_CONTRACT}`}
@@ -138,7 +137,7 @@ export default async function StatsPage() {
               </a>
             </li>
             <li>
-              Bonded market (V3){' '}
+              Bonded market{' '}
               {HIRE_V3_ADDRESS ? (
                 <a
                   className="font-mono underline underline-offset-4"
@@ -154,8 +153,7 @@ export default async function StatsPage() {
             </li>
           </ul>
           <p className="mt-6 text-xs leading-relaxed text-muted">
-            Hire counts come from the <span className="font-mono">Hired</span> event log, so they are the count, not a
-            sample. Hires from the legacy V1 rail and the bonded V3 market are counted together. Returning wallets are wallets with more than one hire.
+            Every hire is counted from the contracts' own event logs. Returning wallets are wallets that hired more than once.
           </p>
         </section>
       </main>

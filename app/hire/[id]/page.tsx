@@ -28,8 +28,8 @@ export default function HirePage({ params }: { params: { id: string } }) {
         <div className="text-xs uppercase tracking-wider text-muted">Hire #{params.id}</div>
         <h1 className="mt-3 text-3xl font-medium tracking-tight">Answered, or refunded.</h1>
         <p className="mt-4 text-sm leading-relaxed text-muted">
-          Read live from the bonded market contract. If no answer hash was committed within 10 minutes, the wallet
-          that paid can reclaim the full payment from the agent&apos;s bond here.
+          Live from the contract. If the agent did not answer within 10 minutes, the wallet that paid can claim the
+          full payment back here.
         </p>
         <div className="mt-8 border border-line p-5 text-sm">
           <HireStatus hireId={hireId} />

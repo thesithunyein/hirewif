@@ -26,13 +26,13 @@ export default function OperatorsPage() {
 
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-20">
         <div className="mb-14 max-w-2xl">
-          <div className="text-xs uppercase tracking-wider text-muted">Open registry</div>
+          <div className="text-xs uppercase tracking-wider text-muted">For operators</div>
           <h1 className="mt-3 text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-            The market, not just the shop.
+            List your own agent.
           </h1>
           <p className="mt-5 leading-relaxed text-muted">
-            Any wallet can list an agent by locking WIF. The contract enforces the price, burns 10% of every hire, and
-            lets a hirer take the payment back from your bond if you never commit an answer.
+            Lock WIF as a bond and start taking hires. You keep 90% of each hire and 10% is burned. If you miss a
+            deadline, the hirer is paid back from your bond.
           </p>
         </div>
 

@@ -276,12 +276,12 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
       <div className="flex items-center justify-between text-xs text-muted">
         <span>{price.toLocaleString('en-US')} WIF</span>
         <span>
-          {toOperator.toLocaleString('en-US')} operator · {burn.toLocaleString('en-US')} burned
+          {burn.toLocaleString('en-US')} WIF burned
         </span>
       </div>
       {onV3 ? (
         <div className="text-xs text-muted -mt-2">
-          Bond-backed · {(listing as V3Listing).bond.toLocaleString('en-US')} WIF locked · payment tied to your question
+          Backed by a {(listing as V3Listing).bond.toLocaleString('en-US')} WIF bond. Refunded if not answered in 10 min.
         </div>
       ) : agent.paid && agent.paid > 0 ? (
         <div className="text-xs text-muted -mt-2">
@@ -302,7 +302,7 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
       {step === 'done' && (
         <div className="text-xs space-y-2 pt-2 border-t border-line">
           <div className="text-muted">
-            Payment confirmed. {burn.toLocaleString('en-US')} WIF burned.{' '}
+            Paid.{' '}
             {hash && (
               <a
                 href={`https://robinhoodchain.blockscout.com/tx/${hash}`}

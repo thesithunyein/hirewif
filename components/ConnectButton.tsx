@@ -26,7 +26,7 @@ export function ConnectButton() {
       <div className="flex items-center gap-3 text-sm">
         <div className="hidden sm:block text-right text-xs text-muted">
           <div>{address.slice(0, 6)}…{address.slice(-4)}</div>
-          <div>{wifBalance ? Number(formatUnits(wifBalance.value, 18)).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} WIF</div>
+          <div>{wifBalance ? Number(formatUnits(wifBalance.value, 18)).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '–'} WIF</div>
         </div>
         <button
           onClick={() => disconnect()}

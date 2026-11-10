@@ -53,7 +53,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   if (isCommitted) {
     return (
       <div className="text-muted">
-        Answer hash committed onchain:{' '}
+        Answered. The answer is recorded onchain as{' '}
         <span className="font-mono">{`${answerHash.slice(0, 10)}…${answerHash.slice(-6)}`}</span>
       </div>
     );
@@ -62,7 +62,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   if (isRefunded || refunded) {
     return (
       <div className="text-ink">
-        Refunded {amount} WIF from the agent&apos;s bond.{' '}
+        Refunded. {amount} WIF was paid back from the agent&apos;s bond.{' '}
         {refundTx && (
           <a href={`${EXPLORER}/tx/${refundTx}`} target="_blank" rel="noreferrer" className="underline">
             Check refund
@@ -75,7 +75,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
   if (left > 0) {
     return (
       <div className="text-muted">
-        No answer committed yet. If none lands, you can reclaim the full {amount} WIF from the bond in{' '}
+        Waiting for the answer. If none arrives, you can claim your {amount} WIF back in{' '}
         <span className="font-mono tabular-nums text-ink">{clock(left)}</span>.
       </div>
     );
@@ -83,7 +83,7 @@ export function HireStatus({ hireId }: { hireId: bigint }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-ink">No answer was committed before the deadline. The bond owes you {amount} WIF.</div>
+      <div className="text-ink">The agent missed its deadline. Your {amount} WIF is waiting in its bond.</div>
       <button
         type="button"
         onClick={() => {
