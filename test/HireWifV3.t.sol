@@ -9,6 +9,7 @@ interface Vm {
     function stopPrank() external;
     function etch(address target, bytes calldata code) external;
     function roll(uint256 newHeight) external;
+    function warp(uint256 newTimestamp) external;
     function expectRevert() external;
 }
 
@@ -155,7 +156,7 @@ contract HireWifV3Test is BaseTest {
 
     function testHireChargesListedPriceAndSplits() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
         uint256 burn = (PRICE * 1000) / 10_000;
 
@@ -171,27 +172,27 @@ contract HireWifV3Test is BaseTest {
     function testHireRejectsUnknownAgent() public {
         vm.prank(USER);
         vm.expectRevert();
-        hw.hire(keccak256("nobody"), TASK, 1);
+        hw.hire(keccak256("nobody"), TASK, 1, PRICE);
     }
 
     function testHireRejectsNonceReplay() public {
         vm.prank(USER);
-        hw.hire(MONITOR, TASK, 7);
+        hw.hire(MONITOR, TASK, 7, PRICE);
 
         vm.prank(USER);
         vm.expectRevert();
-        hw.hire(MONITOR, TASK, 7);
+        hw.hire(MONITOR, TASK, 7, PRICE);
     }
 
     function testHireRejectsEmptyTaskHash() public {
         vm.prank(USER);
         vm.expectRevert();
-        hw.hire(MONITOR, bytes32(0), 1);
+        hw.hire(MONITOR, bytes32(0), 1, PRICE);
     }
 
     function testWithdrawEarnings() public {
         vm.prank(USER);
-        hw.hire(MONITOR, TASK, 1);
+        hw.hire(MONITOR, TASK, 1, PRICE);
 
         uint256 before = wif.balanceOf(OPERATOR);
         vm.prank(OPERATOR);
@@ -209,7 +210,7 @@ contract HireWifV3Test is BaseTest {
 
     function testOperatorCommitsAnswer() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
         bytes32 answerHash = keccak256("price 0.001294");
         vm.prank(OPERATOR);
@@ -223,7 +224,7 @@ contract HireWifV3Test is BaseTest {
 
     function testOnlyOperatorCanCommit() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
         vm.prank(OTHER);
         vm.expectRevert();
@@ -232,9 +233,9 @@ contract HireWifV3Test is BaseTest {
 
     function testCommitRejectedAfterWindow() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
         vm.prank(OPERATOR);
         vm.expectRevert();
         hw.commit(hireId, keccak256("late"));
@@ -242,10 +243,10 @@ contract HireWifV3Test is BaseTest {
 
     function testRefundSlashesBondWhenNoAnswerCommitted() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
         uint256 userAfterHire = wif.balanceOf(USER);
 
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
         vm.prank(USER);
         hw.claimRefund(hireId);
 
@@ -257,7 +258,7 @@ contract HireWifV3Test is BaseTest {
 
     function testRefundRejectedBeforeWindow() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
         vm.prank(USER);
         vm.expectRevert();
@@ -266,12 +267,12 @@ contract HireWifV3Test is BaseTest {
 
     function testRefundRejectedWhenAnswerCommitted() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
         vm.prank(OPERATOR);
         hw.commit(hireId, keccak256("answer"));
 
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
         vm.prank(USER);
         vm.expectRevert();
         hw.claimRefund(hireId);
@@ -279,9 +280,9 @@ contract HireWifV3Test is BaseTest {
 
     function testNoDoubleRefund() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
 
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
         vm.prank(USER);
         hw.claimRefund(hireId);
 
@@ -290,21 +291,160 @@ contract HireWifV3Test is BaseTest {
         hw.claimRefund(hireId);
     }
 
-    function testOnlyHirerCanClaimRefund() public {
+    function testAnyoneCanTriggerRefundButHirerIsPaid() public {
         vm.prank(USER);
-        uint256 hireId = hw.hire(MONITOR, TASK, 1);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
+        uint256 userAfterHire = wif.balanceOf(USER);
+        uint256 otherBefore = wif.balanceOf(OTHER);
 
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
+        vm.prank(OTHER);
+        hw.claimRefund(hireId);
+
+        assertEq(wif.balanceOf(USER), userAfterHire + PRICE, "refund goes to the hirer");
+        assertEq(wif.balanceOf(OTHER), otherBefore, "caller receives nothing");
+        assertEq(hw.totalRefunded(), PRICE, "refund total tracked");
+    }
+
+    function testRefundRejectedForUnknownHire() public {
+        vm.prank(USER);
+        vm.expectRevert();
+        hw.claimRefund(42);
+    }
+
+    function testCommitRejectsEmptyAnswerHash() public {
+        vm.prank(USER);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
+
+        vm.prank(OPERATOR);
+        vm.expectRevert();
+        hw.commit(hireId, bytes32(0));
+    }
+
+    // ------------------------------------------------------------ reserve
+
+    function testHireReservesBondAndCommitReleasesIt() public {
+        vm.prank(USER);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
+
+        (uint256 reserved, uint256 open) = hw.agentReserve(MONITOR);
+        assertEq(reserved, PRICE, "full price reserved");
+        assertEq(open, 1, "one open hire");
+
+        vm.prank(OPERATOR);
+        hw.commit(hireId, keccak256("answer"));
+
+        (reserved, open) = hw.agentReserve(MONITOR);
+        assertEq(reserved, 0, "reserve released on commit");
+        assertEq(open, 0, "no open hires");
+    }
+
+    function testHireRejectedWhenBondCannotCoverRefund() public {
+        // A 10x bond covers exactly ten open hires.
+        for (uint256 i = 1; i <= 10; i++) {
+            vm.prank(USER);
+            hw.hire(MONITOR, TASK, i, PRICE);
+        }
+        vm.prank(USER);
+        vm.expectRevert();
+        hw.hire(MONITOR, TASK, 11, PRICE);
+    }
+
+    function testEveryOverdueHireIsFullyRefundable() public {
+        for (uint256 i = 1; i <= 10; i++) {
+            vm.prank(USER);
+            hw.hire(MONITOR, TASK, i, PRICE);
+        }
+        uint256 userAfterHires = wif.balanceOf(USER);
+
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
+        for (uint256 i = 1; i <= 10; i++) {
+            hw.claimRefund(i);
+        }
+
+        assertEq(wif.balanceOf(USER), userAfterHires + PRICE * 10, "all ten paid back in full");
+        (, , uint256 bond, , , , uint256 slashed, ) = hw.agentInfo(MONITOR);
+        assertEq(bond, 0, "bond fully used");
+        assertEq(slashed, BOND, "whole bond slashed");
+    }
+
+    // ------------------------------------------------- operator escape attempts
+
+    function testOperatorCannotCloseToDodgeRefund() public {
+        vm.prank(USER);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
+        uint256 userAfterHire = wif.balanceOf(USER);
+
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
+
+        // Deadline passed with no commit: the operator tries to pull the bond first.
+        vm.prank(OPERATOR);
+        vm.expectRevert();
+        hw.closeAgent(MONITOR);
+
+        vm.prank(USER);
+        hw.claimRefund(hireId);
+        assertEq(wif.balanceOf(USER), userAfterHire + PRICE, "hirer still made whole");
+    }
+
+    function testOperatorCanCloseAfterSettlingOverdueHire() public {
+        vm.prank(USER);
+        uint256 hireId = hw.hire(MONITOR, TASK, 1, PRICE);
+        uint256 userAfterHire = wif.balanceOf(USER);
+
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1);
+
+        // The operator settles the overdue hire itself, which pays the hirer, then closes.
+        vm.prank(OPERATOR);
+        hw.claimRefund(hireId);
+        assertEq(wif.balanceOf(USER), userAfterHire + PRICE, "hirer paid by operator-triggered refund");
+
+        uint256 before = wif.balanceOf(OPERATOR);
+        vm.prank(OPERATOR);
+        hw.closeAgent(MONITOR);
+        assertEq(wif.balanceOf(OPERATOR), before + BOND - PRICE, "operator gets the rest of the bond");
+    }
+
+    function testOperatorCannotDrainBondWhileHireOpen() public {
+        vm.prank(USER);
+        hw.hire(MONITOR, TASK, 1, PRICE);
+
+        // Dropping the price to 1 wei would otherwise allow a 10 wei bond.
+        vm.prank(OPERATOR);
+        vm.expectRevert();
+        hw.updateAgent(MONITOR, 1, 10);
+
+        // Releasing bond down to exactly the reserve is allowed.
+        vm.prank(OPERATOR);
+        hw.updateAgent(MONITOR, PRICE / 10, PRICE);
+        (, , uint256 bond, , , , , ) = hw.agentInfo(MONITOR);
+        assertEq(bond, PRICE, "bond kept at the reserve");
+    }
+
+    function testPriceRaiseCannotOvercharge() public {
+        vm.prank(OPERATOR);
+        hw.updateAgent(MONITOR, PRICE * 2, BOND * 2);
+
+        vm.prank(USER);
+        vm.expectRevert();
+        hw.hire(MONITOR, TASK, 1, PRICE);
+    }
+
+    function testClosedAgentIdCannotBeReused() public {
+        vm.prank(OPERATOR);
+        hw.closeAgent(MONITOR);
+
         vm.prank(OTHER);
         vm.expectRevert();
-        hw.claimRefund(hireId);
+        hw.register(MONITOR, PRICE, OTHER, BOND);
+        assertEq(hw.agentCount(), 1, "no duplicate listing");
     }
 
     // ------------------------------------------------------------------ close
 
     function testCloseBlockedWhileHireOpen() public {
         vm.prank(USER);
-        hw.hire(MONITOR, TASK, 1);
+        hw.hire(MONITOR, TASK, 1, PRICE);
 
         vm.prank(OPERATOR);
         vm.expectRevert();
@@ -313,11 +453,9 @@ contract HireWifV3Test is BaseTest {
 
     function testCloseReturnsBondAndStopsHires() public {
         vm.prank(USER);
-        hw.hire(MONITOR, TASK, 1);
+        hw.hire(MONITOR, TASK, 1, PRICE);
         vm.prank(OPERATOR);
         hw.commit(1, keccak256("answer"));
-
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
 
         uint256 before = wif.balanceOf(OPERATOR);
         vm.prank(OPERATOR);
@@ -326,15 +464,44 @@ contract HireWifV3Test is BaseTest {
 
         vm.prank(USER);
         vm.expectRevert();
-        hw.hire(MONITOR, TASK, 2);
+        hw.hire(MONITOR, TASK, 2, PRICE);
     }
 
     function testClosedAgentStaysOffTheList() public {
-        vm.roll(block.number + hw.COMMIT_WINDOW() + 1);
         vm.prank(OPERATOR);
         hw.closeAgent(MONITOR);
 
         (,,,,,,, bool active) = hw.agentInfo(MONITOR);
         assertTrue(!active, "inactive after close");
+    }
+
+    // ------------------------------------------------------------------ fuzz
+
+    /// The contract must always hold at least every bond plus unwithdrawn earnings.
+    function testFuzzSolvency(uint8 hiresN, uint8 commitMask, uint16 skip) public {
+        uint256 n = uint256(hiresN) % 10 + 1;
+        for (uint256 i = 1; i <= n; i++) {
+            vm.prank(USER);
+            hw.hire(MONITOR, TASK, i, PRICE);
+            if ((uint256(commitMask) >> (i % 8)) & 1 == 1) {
+                vm.prank(OPERATOR);
+                hw.commit(i, keccak256(abi.encode(i)));
+            }
+        }
+
+        vm.warp(block.timestamp + hw.COMMIT_WINDOW() + 1 + skip);
+        for (uint256 i = 1; i <= n; i++) {
+            (,,,, bool committed,,) = hw.hires(i);
+            if (!committed) hw.claimRefund(i);
+        }
+
+        (, , uint256 bond, , , , , ) = hw.agentInfo(MONITOR);
+        (uint256 reserved, uint256 open) = hw.agentReserve(MONITOR);
+        assertEq(reserved, 0, "nothing reserved once settled");
+        assertEq(open, 0, "nothing open once settled");
+        assertTrue(wif.balanceOf(address(hw)) >= bond + hw.earnings(OPERATOR), "contract solvent");
+
+        vm.prank(OPERATOR);
+        hw.closeAgent(MONITOR);
     }
 }

@@ -87,7 +87,8 @@ export function AgentCard({ agent, listing }: { agent: Agent; listing?: V3Listin
         address: HIRE_V3_ADDRESS as `0x${string}`,
         abi: HIRE_V3_ABI,
         functionName: 'hire',
-        args: [(listing as V3Listing).key, taskHashFor(task), BigInt(Date.now())],
+        // maxPrice = the price the user approved, so a price raise mid-flight reverts instead of overcharging.
+        args: [(listing as V3Listing).key, taskHashFor(task), BigInt(Date.now()), amount],
         chainId: robinhood.id,
       });
       return;

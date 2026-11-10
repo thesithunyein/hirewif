@@ -32,6 +32,7 @@ export const HIRE_V3_ABI = [
       { name: 'agentId', type: 'bytes32' },
       { name: 'taskHash', type: 'bytes32' },
       { name: 'nonce', type: 'uint256' },
+      { name: 'maxPrice', type: 'uint256' },
     ],
     outputs: [{ name: 'hireId', type: 'uint256' }],
   },
@@ -131,6 +132,38 @@ export const HIRE_V3_ABI = [
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
   },
+  {
+    name: 'agentReserve',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'agentId', type: 'bytes32' }],
+    outputs: [
+      { name: 'reserved', type: 'uint256' },
+      { name: 'open', type: 'uint256' },
+    ],
+  },
+  {
+    name: 'hires',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'uint256' }],
+    outputs: [
+      { name: 'agentId', type: 'bytes32' },
+      { name: 'hirer', type: 'address' },
+      { name: 'paid', type: 'uint256' },
+      { name: 'deadline', type: 'uint256' },
+      { name: 'committed', type: 'bool' },
+      { name: 'refunded', type: 'bool' },
+      { name: 'answerHash', type: 'bytes32' },
+    ],
+  },
+  {
+    name: 'totalRefunded',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
 ] as const;
 
 const raw = process.env.NEXT_PUBLIC_HIRE_V3_CONTRACT ?? '';
@@ -141,6 +174,9 @@ export const HIRE_V3_ADDRESS = /^0x[0-9a-fA-F]{40}$/.test(raw) ? (raw as `0x${st
 export const HIRE_V3_CONFIGURED = HIRE_V3_ADDRESS !== null;
 
 export const BOND_MULTIPLE = 10n;
+
+/** Seconds an operator has to commit an answer before the hirer can be refunded from the bond. */
+export const COMMIT_WINDOW_SECONDS = 600;
 
 /** Registry keys are keccak256 of the normalised agent id, on both the site and the contract. */
 export function agentKeyFor(id: string): `0x${string}` {

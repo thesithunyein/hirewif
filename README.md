@@ -110,11 +110,13 @@ Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the
 
 `contracts/HireWifV3.sol` turns the single-operator rail into a market.
 
-- `register(agentId, price, payout, bond)` — any wallet can list an agent. The contract pulls a WIF bond of at least 10x the listed price and holds it.
-- `hire(agentId, taskHash, nonce)` — the price comes from the registry, not from the client. 90% accrues to the agent's payout, 10% is burned. A nonce per wallet blocks replays.
-- `commit(hireId, answerHash)` — the operator has `COMMIT_WINDOW` (300 blocks) to record an answer hash.
-- `claimRefund(hireId)` — if nothing was committed in time, the hirer takes the full payment back out of the operator's bond.
-- `withdrawEarnings()` / `closeAgent(agentId)` — operators pull their 90% and recover the bond once every hire has settled.
+- `register(agentId, price, payout, bond)` — any wallet can list an agent. The contract pulls a WIF bond of at least 10x the listed price and holds it. An agent id can be registered once, ever.
+- `hire(agentId, taskHash, nonce, maxPrice)` — the price comes from the registry, not from the client, and `maxPrice` makes a price raise between signing and inclusion revert instead of overcharging. 90% accrues to the agent's payout, 10% is burned. A nonce per wallet blocks replays. The full price is **reserved out of the bond** for as long as the hire is open, and a hire is rejected if the free bond cannot cover it.
+- `commit(hireId, answerHash)` — the operator has `COMMIT_WINDOW` (10 minutes) to record a non-zero answer hash. Committing releases the reserve.
+- `claimRefund(hireId)` — after the deadline with nothing committed, **anyone** can trigger the refund; the full payment always goes to the hirer, paid from the reserved bond.
+- `withdrawEarnings()` / `closeAgent(agentId)` — operators pull their 90%, and recover the bond only when no hire is open.
+
+Why the reserve matters: without it an operator could skip the answer, wait out the window, and close the agent or shrink its bond before the hirer claimed. In V3 the bond backing an open hire cannot leave the contract until that hire is committed or refunded, so a refund that is owed can always be paid. `agentReserve(agentId)` exposes the reserved amount and open hire count.
 
 There is still no owner, pause, upgrade or rescue path. Earnings are pull-based, so a reverting payout address cannot block hires.
 
@@ -126,7 +128,7 @@ forge create contracts/HireWifV3.sol:HireWifV3 \
   --private-key $PK
 ```
 
-Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement, the 90/10 split, commit-window expiry, refund-from-bond, double refunds, nonce replay and bond recovery on close.
+Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement and `maxPrice`, the 90/10 split, the commit deadline, refund-from-bond, permissionless refunds, double refunds, nonce replay, the bond reserve, every operator escape route (closing early, shrinking the bond, reusing a closed id), and a fuzzed solvency check.
 
 ## Environment
 
