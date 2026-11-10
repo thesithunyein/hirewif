@@ -9,26 +9,33 @@ interface IERC20V3 {
 /// @title HireWif V3 - a permissionless market for paid agent answers.
 /// @notice Anyone can list an agent by locking a WIF bond of at least 10x its price.
 ///         The price is enforced by the contract, the 10% burn cannot be redirected,
-///         and a hirer can reclaim the full payment from the operator's bond if the
-///         operator never commits an answer within COMMIT_WINDOW blocks.
+///         and every open hire reserves its full payment out of the operator's bond.
+///         If the operator does not commit an answer within COMMIT_WINDOW, anyone can
+///         trigger the refund and the hirer is paid back in full from that reserve.
 /// @dev No owner, no pause, no upgrade, no rescue. The only mutating paths are below.
+///
+///      Invariant: for every agent, reserved <= bond, where reserved is the sum of
+///      `paid` over its hires that are neither committed nor refunded. The operator
+///      cannot close the agent, lower the bond below the reserve, or reuse a closed
+///      agent id, so a refund that is owed can always be paid.
 contract HireWifV3 {
     address public constant WIF = 0x5173b8eA6923c2d40267890D45C46a3480954773;
     address public constant BURN = 0x000000000000000000000000000000000000dEaD;
 
     uint256 public constant BURN_BPS = 1000; // 10% of every hire is burned
     uint256 public constant BOND_MULTIPLE = 10; // bond must be at least 10x the listed price
-    uint256 public constant COMMIT_WINDOW = 300; // blocks an operator has to commit an answer
+    uint256 public constant COMMIT_WINDOW = 10 minutes; // time an operator has to commit an answer
 
     struct Agent {
         address payout;
         uint256 price;
         uint256 bond;
+        uint256 reserved; // bond earmarked for open hires
+        uint256 open; // hires neither committed nor refunded
         uint256 hires;
         uint256 paid;
         uint256 burned;
         uint256 slashed;
-        uint256 lastHireBlock;
         bool active;
     }
 
@@ -36,7 +43,7 @@ contract HireWifV3 {
         bytes32 agentId;
         address hirer;
         uint256 paid;
-        uint256 blockNumber;
+        uint256 deadline; // unix time after which an uncommitted hire is refundable
         bool committed;
         bool refunded;
         bytes32 answerHash;
@@ -51,6 +58,7 @@ contract HireWifV3 {
     uint256 public hireCount;
     uint256 public totalPaid;
     uint256 public totalBurned;
+    uint256 public totalRefunded;
 
     event AgentRegistered(bytes32 indexed agentId, address indexed payout, uint256 price, uint256 bond);
     event AgentUpdated(bytes32 indexed agentId, uint256 price, uint256 bond);
@@ -72,57 +80,57 @@ contract HireWifV3 {
     // ---------------------------------------------------------------- registry
 
     /// @notice List an agent. The bond is pulled from msg.sender and held by this contract.
+    /// @dev An id can be registered once. A closed id stays closed, so old hires can never
+    ///      be settled against a new operator's bond.
     function register(bytes32 agentId, uint256 price, address payout, uint256 bond) external {
         require(agentId != bytes32(0), "agent id required");
-        require(!_agents[agentId].active, "agent already registered");
+        require(_agents[agentId].payout == address(0), "agent id taken");
         require(payout != address(0), "payout required");
         require(price > 0, "price required");
         require(bond >= price * BOND_MULTIPLE, "bond must be 10x price");
 
         _pull(msg.sender, bond);
 
-        _agents[agentId] = Agent({
-            payout: payout,
-            price: price,
-            bond: bond,
-            hires: 0,
-            paid: 0,
-            burned: 0,
-            slashed: 0,
-            lastHireBlock: block.number,
-            active: true
-        });
+        Agent storage a = _agents[agentId];
+        a.payout = payout;
+        a.price = price;
+        a.bond = bond;
+        a.active = true;
         _ids.push(agentId);
 
         emit AgentRegistered(agentId, payout, price, bond);
     }
 
-    /// @notice Change the listed price and top up or release the bond. Operator only.
+    /// @notice Change the listed price and top up or release bond. Operator only.
+    /// @dev Bond held for open hires can never be released.
     function updateAgent(bytes32 agentId, uint256 price, uint256 bond) external {
         Agent storage a = _agents[agentId];
         require(a.active, "unknown agent");
         require(a.payout == msg.sender, "not the operator");
         require(price > 0, "price required");
         require(bond >= price * BOND_MULTIPLE, "bond must be 10x price");
+        require(bond >= a.reserved, "bond reserved for open hires");
 
-        if (bond > a.bond) {
-            _pull(msg.sender, bond - a.bond);
-        } else if (bond < a.bond) {
-            _push(msg.sender, a.bond - bond);
-        }
-
+        uint256 current = a.bond;
         a.price = price;
         a.bond = bond;
+
+        if (bond > current) {
+            _pull(msg.sender, bond - current);
+        } else if (bond < current) {
+            _push(msg.sender, current - bond);
+        }
 
         emit AgentUpdated(agentId, price, bond);
     }
 
-    /// @notice Stop taking new hires and recover the bond once every hire is settled.
+    /// @notice Stop taking new hires and recover the bond. Every hire must be settled first:
+    ///         committed in time, or refunded (anyone can trigger an overdue refund).
     function closeAgent(bytes32 agentId) external {
         Agent storage a = _agents[agentId];
         require(a.active, "unknown agent");
         require(a.payout == msg.sender, "not the operator");
-        require(block.number > a.lastHireBlock + COMMIT_WINDOW, "hire still open");
+        require(a.open == 0, "hire still open");
 
         a.active = false;
         uint256 bond = a.bond;
@@ -134,78 +142,95 @@ contract HireWifV3 {
 
     // ------------------------------------------------------------------- hires
 
-    /// @notice Hire a listed agent at its listed price. The price is not a client choice.
-    function hire(bytes32 agentId, bytes32 taskHash, uint256 nonce) external returns (uint256 hireId) {
+    /// @notice Hire a listed agent at its listed price. The price is not a client choice, and
+    ///         `maxPrice` stops the operator from raising it between signing and inclusion.
+    function hire(bytes32 agentId, bytes32 taskHash, uint256 nonce, uint256 maxPrice)
+        external
+        returns (uint256 hireId)
+    {
         Agent storage a = _agents[agentId];
         require(a.active, "unknown agent");
         require(taskHash != bytes32(0), "task hash required");
         require(!usedNonce[msg.sender][nonce], "nonce already used");
-        usedNonce[msg.sender][nonce] = true;
 
         uint256 paid = a.price;
+        require(paid <= maxPrice, "price above max");
+        require(a.bond - a.reserved >= paid, "bond cannot cover refund");
+
+        usedNonce[msg.sender][nonce] = true;
+
         uint256 burned = (paid * BURN_BPS) / 10_000;
         uint256 toPayout = paid - burned;
 
-        _pull(msg.sender, paid);
-        if (burned > 0) require(IERC20V3(WIF).transfer(BURN, burned), "burn failed");
+        a.reserved += paid;
+        a.open += 1;
+        a.hires += 1;
+        a.paid += paid;
+        a.burned += burned;
         earnings[a.payout] += toPayout;
+        totalPaid += paid;
+        totalBurned += burned;
 
         hireId = ++hireCount;
         hires[hireId] = HireRecord({
             agentId: agentId,
             hirer: msg.sender,
             paid: paid,
-            blockNumber: block.number,
+            deadline: block.timestamp + COMMIT_WINDOW,
             committed: false,
             refunded: false,
             answerHash: bytes32(0)
         });
 
-        a.hires += 1;
-        a.paid += paid;
-        a.burned += burned;
-        a.lastHireBlock = block.number;
-        totalPaid += paid;
-        totalBurned += burned;
+        _pull(msg.sender, paid);
+        if (burned > 0) _push(BURN, burned);
 
         emit Hired(hireId, agentId, msg.sender, paid, burned, taskHash, nonce);
     }
 
-    /// @notice Record the answer hash for a hire. Operator only, inside the window.
+    /// @notice Record the answer hash for a hire. Operator only, before the deadline.
     function commit(uint256 hireId, bytes32 answerHash) external {
         HireRecord storage h = hires[hireId];
         require(h.hirer != address(0), "unknown hire");
+        require(answerHash != bytes32(0), "answer hash required");
         require(!h.committed, "already committed");
         require(!h.refunded, "already refunded");
-        require(block.number <= h.blockNumber + COMMIT_WINDOW, "commit window closed");
+        require(block.timestamp <= h.deadline, "commit window closed");
 
         Agent storage a = _agents[h.agentId];
         require(a.payout == msg.sender, "not the operator");
 
         h.committed = true;
         h.answerHash = answerHash;
+        a.reserved -= h.paid;
+        a.open -= 1;
 
         emit Committed(hireId, answerHash);
     }
 
-    /// @notice Hirer reclaims the payment from the bond if no answer was committed.
+    /// @notice Refund an uncommitted hire after its deadline. Anyone may call it, and the
+    ///         full payment always goes to the hirer, taken from the operator's reserved bond.
     function claimRefund(uint256 hireId) external {
         HireRecord storage h = hires[hireId];
-        require(h.hirer == msg.sender, "not the hirer");
+        require(h.hirer != address(0), "unknown hire");
         require(!h.committed, "answer was committed");
         require(!h.refunded, "already refunded");
-        require(block.number > h.blockNumber + COMMIT_WINDOW, "commit window still open");
+        require(block.timestamp > h.deadline, "commit window still open");
 
         Agent storage a = _agents[h.agentId];
-        uint256 amount = h.paid < a.bond ? h.paid : a.bond;
+        uint256 amount = h.paid;
+
         h.refunded = true;
+        a.reserved -= amount;
+        a.open -= 1;
         a.bond -= amount;
         a.slashed += amount;
+        totalRefunded += amount;
 
-        if (amount > 0) _push(msg.sender, amount);
+        _push(h.hirer, amount);
 
-        emit Refunded(hireId, msg.sender, amount);
-        emit BondSlashed(h.agentId, msg.sender, amount);
+        emit Refunded(hireId, h.hirer, amount);
+        emit BondSlashed(h.agentId, h.hirer, amount);
     }
 
     /// @notice Operators pull their accumulated 90% share. Held so a reverting payout cannot block hires.
@@ -244,6 +269,12 @@ contract HireWifV3 {
     {
         Agent storage a = _agents[agentId];
         return (a.payout, a.price, a.bond, a.hires, a.paid, a.burned, a.slashed, a.active);
+    }
+
+    /// @notice Bond earmarked for open hires, and how many hires are still open.
+    function agentReserve(bytes32 agentId) external view returns (uint256 reserved, uint256 open) {
+        Agent storage a = _agents[agentId];
+        return (a.reserved, a.open);
     }
 
     // ---------------------------------------------------------------- internal

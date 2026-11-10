@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://www.hirewif.tech">Live site</a> ·
-  <a href="https://robinhoodchain.blockscout.com/address/0x423B8701Da3a251a3A3fc2d241b71e8d05744C91">Contract</a> ·
+  <a href="https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31">Bonded market (V3)</a> ·
   <a href="https://github.com/thesithunyein/hirewif">GitHub</a>
 </p>
 
@@ -51,10 +51,10 @@ Each agent answers with numbers and names the source. No model writes the answer
 
 | Agent | Price | What it returns |
 |---|---|---|
-| Monitor | 250 WIF | Price, market cap, liquidity, 24h volume and buy/sell counts from DexScreener, plus the largest WIF transfers onchain |
-| Ledger | 500 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which agents were hired |
-| Data | 750 WIF | Supply, burn-address balance, and transfer flow computed from the last 200,000 blocks of WIF logs |
-| Research | 1,000 WIF | Market, supply and hire data in one brief, with every number tied to its source |
+| Monitor | 4 WIF | Price, market cap, liquidity, 24h volume and buy/sell counts from DexScreener, plus the largest WIF transfers onchain |
+| Ledger | 8 WIF | Every hire on this contract, decoded from `Hired` events: total WIF paid, WIF burned, and which agents were hired |
+| Data | 12 WIF | Supply, burn-address balance, and transfer flow computed from the last 200,000 blocks of WIF logs |
+| Research | 20 WIF | Market, supply and hire data in one brief, with every number tied to its source |
 
 Data sources: DexScreener for market data, `eth_getLogs` and `eth_call` against `rpc.mainnet.chain.robinhood.com` for chain data. No paid API.
 
@@ -95,14 +95,14 @@ When Redis is configured, the marketplace also records wallet-scoped WIF watches
 
 ## Pricing and payouts
 
-Four agents, priced by the site:
+Four agents. On the bonded V3 market the price is set in the registry and enforced by the contract; these are the listed prices:
 
 | Agent | Price |
 |---|---|
-| Monitor | 250 WIF |
-| Ledger | 500 WIF |
-| Data | 750 WIF |
-| Research | 1,000 WIF |
+| Monitor | 4 WIF |
+| Ledger | 8 WIF |
+| Data | 12 WIF |
+| Research | 20 WIF |
 
 Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the constructor. There is no third-party payee on the deployed contract.
 
@@ -110,23 +110,26 @@ Each hire burns 10% to `0xdEaD` and sends 90% to the operator address set in the
 
 `contracts/HireWifV3.sol` turns the single-operator rail into a market.
 
-- `register(agentId, price, payout, bond)` — any wallet can list an agent. The contract pulls a WIF bond of at least 10x the listed price and holds it.
-- `hire(agentId, taskHash, nonce)` — the price comes from the registry, not from the client. 90% accrues to the agent's payout, 10% is burned. A nonce per wallet blocks replays.
-- `commit(hireId, answerHash)` — the operator has `COMMIT_WINDOW` (300 blocks) to record an answer hash.
-- `claimRefund(hireId)` — if nothing was committed in time, the hirer takes the full payment back out of the operator's bond.
-- `withdrawEarnings()` / `closeAgent(agentId)` — operators pull their 90% and recover the bond once every hire has settled.
+- `register(agentId, price, payout, bond)` — any wallet can list an agent. The contract pulls a WIF bond of at least 10x the listed price and holds it. An agent id can be registered once, ever.
+- `hire(agentId, taskHash, nonce, maxPrice)` — the price comes from the registry, not from the client, and `maxPrice` makes a price raise between signing and inclusion revert instead of overcharging. 90% accrues to the agent's payout, 10% is burned. A nonce per wallet blocks replays. The full price is **reserved out of the bond** for as long as the hire is open, and a hire is rejected if the free bond cannot cover it.
+- `commit(hireId, answerHash)` — the operator has `COMMIT_WINDOW` (10 minutes) to record a non-zero answer hash. Committing releases the reserve.
+- `claimRefund(hireId)` — after the deadline with nothing committed, **anyone** can trigger the refund; the full payment always goes to the hirer, paid from the reserved bond.
+- `withdrawEarnings()` / `closeAgent(agentId)` — operators pull their 90%, and recover the bond only when no hire is open.
+
+Why the reserve matters: without it an operator could skip the answer, wait out the window, and close the agent or shrink its bond before the hirer claimed. In V3 the bond backing an open hire cannot leave the contract until that hire is committed or refunded, so a refund that is owed can always be paid. `agentReserve(agentId)` exposes the reserved amount and open hire count.
 
 There is still no owner, pause, upgrade or rescue path. Earnings are pull-based, so a reverting payout address cannot block hires.
 
-V3 is not deployed by this repo yet, and the live site keeps using V1 until `NEXT_PUBLIC_HIRE_V3_CONTRACT` is set. Deploy and then point the site at it:
+**Deployed on Robinhood Chain (4663):** [`0xadf0244fEE999B019EDc712Ec5345c65C8506c31`](https://robinhoodchain.blockscout.com/address/0xadf0244fEE999B019EDc712Ec5345c65C8506c31), source verified on Blockscout (exact match, solc 0.8.34, optimizer off). Four agents are listed with 10x bonds, 440 WIF locked in total.
+
+To deploy your own instance and list the agents, import a funded wallet into a Foundry keystore and run the script; it never reads a raw key:
 
 ```bash
-forge create contracts/HireWifV3.sol:HireWifV3 \
-  --rpc-url https://rpc.mainnet.chain.robinhood.com \
-  --private-key $PK
+cast wallet import hirewif-deployer --interactive
+PAYOUT=0xServerHotWallet DEPLOYER=0xYourWallet ./scripts/deploy-v3.sh
 ```
 
-Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement, the 90/10 split, commit-window expiry, refund-from-bond, double refunds, nonce replay and bond recovery on close.
+Tests: `forge test --match-contract HireWifV3Test` covers bond enforcement, price enforcement and `maxPrice`, the 90/10 split, the commit deadline, refund-from-bond, permissionless refunds, double refunds, nonce replay, the bond reserve, every operator escape route (closing early, shrinking the bond, reusing a closed id), and a fuzzed solvency check.
 
 ## Environment
 

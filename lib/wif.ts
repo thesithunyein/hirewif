@@ -255,31 +255,48 @@ export async function getHires(): Promise<Hires> {
   return cached('hires', 30_000, async () => {
     try {
       const latest = await client.getBlockNumber({ cacheTime: 0 });
-      const logs = [];
+      const hires: Hire[] = [];
+
+      // V3 events carry the agent as keccak256(id); map it back to the catalog id.
+      const agentByKey = new Map(agents.map((agent) => [agentKeyFor(agent.id).toLowerCase(), agent.id]));
 
       for (let fromBlock = DEPLOY_BLOCK; fromBlock <= latest; fromBlock += LOG_CHUNK) {
         const toBlock = fromBlock + LOG_CHUNK - 1n > latest ? latest : fromBlock + LOG_CHUNK - 1n;
-        const chunk = await withTimeout(
-          client.getLogs({
-            address: HIRE_CONTRACT,
-            event: HIRED,
-            fromBlock,
-            toBlock,
-            strict: true,
-          }),
-          CHUNK_TIMEOUT_MS
-        );
-        logs.push(...chunk);
-      }
+        const [v1, v3] = await Promise.all([
+          withTimeout(
+            client.getLogs({ address: HIRE_CONTRACT, event: HIRED, fromBlock, toBlock, strict: true }),
+            CHUNK_TIMEOUT_MS
+          ),
+          HIRE_V3_ADDRESS
+            ? withTimeout(
+                client.getLogs({ address: HIRE_V3_ADDRESS, event: HIRED_V3, fromBlock, toBlock, strict: true }),
+                CHUNK_TIMEOUT_MS
+              )
+            : Promise.resolve([]),
+        ]);
 
-      const hires: Hire[] = logs.map((log) => ({
-        user: String(log.args.user),
-        agent: String(log.args.agent),
-        paid: Number(formatUnits(log.args.paid, 18)),
-        burned: Number(formatUnits(log.args.burned, 18)),
-        tx: String(log.transactionHash),
-        block: Number(log.blockNumber),
-      }));
+        for (const log of v1) {
+          hires.push({
+            user: String(log.args.user),
+            agent: String(log.args.agent),
+            paid: Number(formatUnits(log.args.paid, 18)),
+            burned: Number(formatUnits(log.args.burned, 18)),
+            tx: String(log.transactionHash),
+            block: Number(log.blockNumber),
+          });
+        }
+        for (const log of v3) {
+          const key = String(log.args.agentId).toLowerCase();
+          hires.push({
+            user: String(log.args.hirer),
+            agent: agentByKey.get(key) ?? key,
+            paid: Number(formatUnits(log.args.paid, 18)),
+            burned: Number(formatUnits(log.args.burned, 18)),
+            tx: String(log.transactionHash),
+            block: Number(log.blockNumber),
+          });
+        }
+      }
 
       const byAgent = new Map<string, { paid: number; hires: number }>();
       const byUser = new Map<string, number>();
@@ -365,8 +382,8 @@ export async function verifyV3Hire(
   task: string,
   txHash: Hash,
   payer: string
-): Promise<{ ok: boolean; hireId: bigint | null }> {
-  const miss = { ok: false, hireId: null } as const;
+): Promise<{ ok: boolean; hireId: bigint | null; paid: bigint; burned: bigint }> {
+  const miss = { ok: false, hireId: null, paid: 0n, burned: 0n } as const;
   if (!HIRE_V3_ADDRESS) return miss;
 
   try {
@@ -405,7 +422,7 @@ export async function verifyV3Hire(
     if (burned > 0n && wifMoved(receipt.logs, HIRE_V3_ADDRESS, BURN_ADDRESS) !== burned) return miss;
 
     const args = match.args as { hireId?: bigint };
-    return { ok: true, hireId: args.hireId ?? null };
+    return { ok: true, hireId: args.hireId ?? null, paid, burned };
   } catch {
     return miss;
   }
@@ -417,11 +434,11 @@ export async function claimHirePaymentV3(
   task: string,
   txHash: Hash,
   payer: string
-): Promise<{ ok: boolean; hireId: bigint | null }> {
+): Promise<{ ok: boolean; hireId: bigint | null; paid: bigint; burned: bigint }> {
   const verified = await verifyV3Hire(agentId, task, txHash, payer);
   if (!verified.ok) return verified;
   const claimed = await claimRedemption(redemptionKey('v3', txHash));
-  return claimed ? verified : { ok: false, hireId: null };
+  return claimed ? verified : { ok: false, hireId: null, paid: 0n, burned: 0n };
 }
 
 export async function getBlockTimes(blocks: number[]): Promise<Map<number, number>> {

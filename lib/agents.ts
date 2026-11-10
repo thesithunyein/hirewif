@@ -15,7 +15,7 @@ export const agents: Agent[] = [
     id: 'monitor',
     name: 'Monitor',
     role: 'Live market data',
-    price: 250,
+    price: 4,
     address: OPERATOR,
     description:
       'Current WIF price, market cap, liquidity, 24h volume, and largest transfers. Uses DexScreener and Robinhood Chain.',
@@ -25,7 +25,7 @@ export const agents: Agent[] = [
     id: 'ledger',
     name: 'Ledger',
     role: 'Marketplace activity',
-    price: 500,
+    price: 8,
     address: OPERATOR,
     description:
       'Total hires, WIF paid, WIF burned, and the most-used agents on this marketplace.',
@@ -35,7 +35,7 @@ export const agents: Agent[] = [
     id: 'data',
     name: 'Data',
     role: 'Onchain WIF data',
-    price: 750,
+    price: 12,
     address: OPERATOR,
     description:
       'WIF supply, burn balance, and recent transfer flow from Robinhood Chain.',
@@ -45,7 +45,7 @@ export const agents: Agent[] = [
     id: 'research',
     name: 'Research',
     role: 'WIF market brief',
-    price: 1_000,
+    price: 20,
     address: OPERATOR,
     description:
       'A decision brief with live market conditions, supply context, marketplace traction, risks, and source links.',
