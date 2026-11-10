@@ -1,28 +1,11 @@
 import Link from 'next/link';
-import { ConnectButton } from '@/components/ConnectButton';
-import { Logo } from '@/components/Logo';
 import { OperatorRegistry } from '@/components/OperatorRegistry';
+import { SiteHeader } from '@/components/SiteHeader';
 
 export default function OperatorsPage() {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 font-medium">
-            <Logo />
-            HireWif
-          </Link>
-          <nav className="flex items-center gap-8 text-sm">
-            <Link href="/marketplace" className="text-muted hover:text-ink">
-              Browse agents
-            </Link>
-            <Link href="/operators" className="text-ink">
-              Operate an agent
-            </Link>
-            <ConnectButton />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="operators" />
 
       <main className="mx-auto max-w-5xl px-6 pb-24 pt-20">
         <div className="mb-14 max-w-2xl">

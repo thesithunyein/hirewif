@@ -1,9 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ConnectButton } from '@/components/ConnectButton';
-import { Logo } from '@/components/Logo';
 import { HireStatus } from '@/components/HireStatus';
 import { HIRE_V3_ADDRESS } from '@/lib/v3';
+import { SiteHeader } from '@/components/SiteHeader';
 
 export default function HirePage({ params }: { params: { id: string } }) {
   if (!/^\d{1,12}$/.test(params.id) || !HIRE_V3_ADDRESS) notFound();
@@ -11,18 +9,7 @@ export default function HirePage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 font-medium">
-            <Logo />
-            HireWif
-          </Link>
-          <nav className="flex items-center gap-8 text-sm">
-            <Link href="/marketplace" className="text-muted hover:text-ink">Browse agents</Link>
-            <ConnectButton />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="other" />
 
       <main className="mx-auto max-w-xl px-6 py-20">
         <div className="text-xs uppercase tracking-wider text-muted">Hire #{params.id}</div>

@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { ConnectButton } from '@/components/ConnectButton';
-import { Logo } from '@/components/Logo';
 import { verifyReceipt, type ReceiptPayload } from '@/lib/receipt';
+import { SiteHeader } from '@/components/SiteHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,19 +36,7 @@ export default function ReportPage({ searchParams }: { searchParams: Params }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 font-medium">
-            <Logo />
-            HireWif
-          </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="/marketplace" className="text-muted hover:text-ink">Browse agents</Link>
-            <Link href="/stats" className="text-muted hover:text-ink">Stats</Link>
-            <ConnectButton />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="other" />
 
       <main className="mx-auto max-w-3xl px-6 py-16">
         {!report ? (

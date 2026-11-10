@@ -39,15 +39,19 @@ export function ConnectButton() {
   }
 
   if (hasWallet === false) {
+    // On a phone, open this page inside the MetaMask app's browser; on desktop, get the extension.
+    const mobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const href = mobile
+      ? `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`
+      : 'https://metamask.io/download/';
     return (
       <a
-        href="https://rabby.io/"
+        href={href}
         target="_blank"
         rel="noreferrer"
-        className="px-4 py-2 border border-line text-sm hover:border-ink"
-        title="HireWif pays in WIF on Robinhood Chain, so it needs an EVM wallet"
+        className="px-3 py-2 border border-line text-sm hover:border-ink sm:px-4"
       >
-        Get a wallet
+        {mobile ? 'Open in MetaMask' : 'Get MetaMask'}
       </a>
     );
   }

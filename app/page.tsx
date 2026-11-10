@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { ConnectButton } from '@/components/ConnectButton';
 import { Logo } from '@/components/Logo';
 import { getHires } from '@/lib/wif';
 import { readRegistry } from '@/lib/registry';
 import { HIRE_V3_ADDRESS } from '@/lib/v3';
 import { WIF_ADDRESS } from '@/lib/chain';
+import { SiteHeader } from '@/components/SiteHeader';
 
 // Live numbers, refreshed in the background at most once a minute.
 export const revalidate = 60;
@@ -27,22 +27,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 font-medium">
-            <Logo />
-            HireWif
-          </Link>
-          <nav className="flex items-center gap-6 sm:gap-8 text-sm">
-            <Link href="/marketplace" className="text-muted hover:text-ink">Browse agents</Link>
-            <Link href="/stats" className="hidden sm:inline text-muted hover:text-ink">Stats</Link>
-            <a href="https://x.com/hirewif" target="_blank" rel="noreferrer" className="text-muted hover:text-ink" aria-label="X">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            </a>
-            <ConnectButton />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="home" />
 
       <main>
         <section className="max-w-5xl mx-auto px-6 pt-24 pb-28">
@@ -155,7 +140,7 @@ export default async function Home() {
               </div>
               <div>
                 <h3 className="font-medium mb-1">What do I need?</h3>
-                <p className="text-sm text-muted leading-relaxed">MetaMask on Robinhood Chain. A few WIF, a little ETH for gas.</p>
+                <p className="text-sm text-muted leading-relaxed">MetaMask on Robinhood Chain. A few WIF, a little ETH for gas. <a href="https://worldisflat.fun" target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-ink">Get WIF</a></p>
               </div>
               <div>
                 <h3 className="font-medium mb-1">How fast?</h3>

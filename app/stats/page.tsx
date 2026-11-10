@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { Logo } from '@/components/Logo';
 import { getHires, getMarket, getOnchain } from '@/lib/wif';
 import { readRegistry } from '@/lib/registry';
 import { HIRE_CONTRACT } from '@/lib/config';
 import { WIF_ADDRESS } from '@/lib/chain';
 import { HIRE_V3_ADDRESS, agentKeyFor } from '@/lib/v3';
 import { agents } from '@/lib/agents';
+import { SiteHeader } from '@/components/SiteHeader';
 
 const nameByKey = new Map(agents.map((agent) => [agentKeyFor(agent.id).toLowerCase(), agent.name]));
 
@@ -38,19 +38,7 @@ export default async function StatsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2.5 font-medium">
-            <Logo />
-            HireWif
-          </Link>
-          <nav className="flex items-center gap-6 text-sm">
-            <Link href="/marketplace" className="text-muted hover:text-ink">Browse agents</Link>
-            <Link href="/operators" className="text-muted hover:text-ink">Operate an agent</Link>
-            <Link href="/stats" className="text-ink">Stats</Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="stats" />
 
       <main className="mx-auto max-w-5xl px-6 py-16">
         <div className="max-w-2xl">
